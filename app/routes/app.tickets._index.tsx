@@ -22,6 +22,11 @@ export default function TicketsBoard() {
   const [technicians, setTechnicians] = useState<Array<{ id: string; name: string }>>([]);
 
   const loadTickets = useCallback(async () => {
+    const requestId = Math.random().toString(36).substring(7);
+    console.log(`[CLIENT:${requestId}] ===== loadTickets called =====`);
+    console.log(`[CLIENT:${requestId}] Status filter:`, statusFilter);
+    console.log(`[CLIENT:${requestId}] Technician filter:`, technicianFilter);
+    
     setLoading(true);
     setError(null);
     try {
@@ -30,19 +35,51 @@ export default function TicketsBoard() {
       if (statusFilter !== "all") params.append("status", statusFilter);
       if (technicianFilter !== "all") params.append("technicianId", technicianFilter);
       const url = `${baseUrl}/api/tickets/list${params.toString() ? `?${params.toString()}` : ''}`;
-      const response = await fetch(url);
-      if (!response.ok) throw new Error(`Failed to load tickets: ${response.statusText}`);
+      console.log(`[CLIENT:${requestId}] Fetching from URL:`, url);
+      
+      const fetchStartTime = Date.now();
+      const response = await fetch(url, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        credentials: "include", // Include cookies for authentication
+      });
+      const fetchDuration = Date.now() - fetchStartTime;
+      console.log(`[CLIENT:${requestId}] Fetch completed (${fetchDuration}ms), status:`, response.status, response.statusText);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`[CLIENT:${requestId}] Response not OK:`, errorText);
+        throw new Error(`Failed to load tickets: ${response.status} ${response.statusText}`);
+      }
+      
       const data = await response.json();
+      console.log(`[CLIENT:${requestId}] Response data:`, {
+        success: data.success,
+        ticketCount: data.tickets?.length || 0,
+        error: data.error,
+        debug: data.debug,
+      });
+      
       if (data.success) {
+        console.log(`[CLIENT:${requestId}] ✅ Setting ${data.tickets?.length || 0} tickets`);
         setTickets(data.tickets || []);
       } else {
+        console.error(`[CLIENT:${requestId}] ❌ API returned error:`, data.error);
         throw new Error(data.error || "Failed to load tickets");
       }
     } catch (err) {
-      console.error("Error loading tickets:", err);
+      console.error(`[CLIENT:${requestId}] ❌ Error loading tickets:`, err);
+      if (err instanceof Error) {
+        console.error(`[CLIENT:${requestId}] Error name:`, err.name);
+        console.error(`[CLIENT:${requestId}] Error message:`, err.message);
+        console.error(`[CLIENT:${requestId}] Error stack:`, err.stack);
+      }
       setError(err instanceof Error ? err.message : "Unknown error");
     } finally {
       setLoading(false);
+      console.log(`[CLIENT:${requestId}] ===== loadTickets completed =====`);
     }
   }, [statusFilter, technicianFilter]);
 
