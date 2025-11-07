@@ -1,0 +1,97 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Shop {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopDomain  String   @unique @map("shop_domain")
+  accessToken String   @map("access_token")
+  scope       String
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  tickets     Ticket[]
+
+  @@map("shops")
+}
+
+model Ticket {
+  id               String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  shopId           String      @map("shop_id") @db.Uuid
+  shopDomain       String      @map("shop_domain")
+  status           String      @default("intake")
+  customerId       String      @map("customer_id")
+  deviceType       String?     @map("device_type")
+  deviceBrand      String?     @map("device_brand")
+  deviceModel      String?     @map("device_model")
+  serial           String?
+  issueDescription String?     @map("issue_description")
+  photos           Json        @default("[]")
+  quotedAmount     Decimal?    @map("quoted_amount") @db.Decimal(10, 2)
+  depositAmount    Decimal     @default(0) @map("deposit_amount") @db.Decimal(10, 2)
+  remainingAmount  Decimal     @default(0) @map("remaining_amount") @db.Decimal(10, 2)
+  intakeOrderId    String?     @map("intake_order_id")
+  finalOrderId     String?     @map("final_order_id")
+  technicianId     String?     @map("technician_id") // Shopify StaffMember GID (e.g., gid://shopify/StaffMember/123)
+  createdAt        DateTime    @default(now()) @map("created_at")
+  updatedAt        DateTime    @updatedAt @map("updated_at")
+  auditLogs        AuditLog[]
+  partsUsed        PartsUsed[]
+  shop             Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
+
+  @@index([customerId], map: "idx_tickets_customer")
+  @@index([shopId, status], map: "idx_tickets_shop_status")
+  @@index([technicianId], map: "idx_tickets_technician")
+  @@map("tickets")
+}
+
+model PartsUsed {
+  id       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId String  @map("ticket_id") @db.Uuid
+  name     String? @map("name")
+  sku      String?
+  quantity Int     @default(1)
+  cost     Decimal @default(0) @db.Decimal(10, 2)
+  ticket   Ticket  @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@map("parts_used")
+}
+
+model AuditLog {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId  String   @map("ticket_id") @db.Uuid
+  actor     String
+  action    String
+  meta      Json?
+  createdAt DateTime @default(now()) @map("created_at")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId], map: "idx_audit_ticket")
+  @@map("audit_logs")
+}
+
+model Session {
+  id            String    @id
+  shop          String
+  state         String
+  isOnline      Boolean   @default(false)
+  scope         String?
+  expires       DateTime?
+  accessToken   String
+  userId        BigInt?
+  firstName     String?
+  lastName      String?
+  email         String?
+  accountOwner  Boolean   @default(false)
+  locale        String?
+  collaborator  Boolean?  @default(false)
+  emailVerified Boolean?  @default(false)
+
+  @@index([expires], map: "idx_session_expires")
+  @@index([shop], map: "idx_session_shop")
+}

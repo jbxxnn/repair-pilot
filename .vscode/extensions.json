@@ -1,0 +1,14 @@
+{
+  "recommendations": [
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+    "graphql.vscode-graphql",
+    "graphql.vscode-graphql-syntax",
+    "shopify.shopify-cli",
+    "ms-vscode.vscode-typescript-next"
+  ]
+}
+
+
+
+
