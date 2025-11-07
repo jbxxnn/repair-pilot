@@ -6,7 +6,20 @@ import { AppProvider } from "@shopify/shopify-app-react-router/react";
 import { authenticate } from "../shopify.server";
 
 export const loader = async ({ request }: LoaderFunctionArgs) => {
-  await authenticate.admin(request);
+  const requestId = Math.random().toString(36).substring(7);
+  console.log(`[APP:${requestId}] ===== App layout loader called =====`);
+  console.log(`[APP:${requestId}] Request URL:`, request.url);
+  
+  try {
+    const { session } = await authenticate.admin(request);
+    console.log(`[APP:${requestId}] ✅ Authentication successful`);
+    console.log(`[APP:${requestId}] Session shop:`, session?.shop);
+    console.log(`[APP:${requestId}] ===== End app layout loader =====`);
+  } catch (error) {
+    console.error(`[APP:${requestId}] ❌ Authentication failed:`, error);
+    console.log(`[APP:${requestId}] ===== End app layout loader (error) =====`);
+    throw error; // Re-throw to let React Router handle it
+  }
 
   // eslint-disable-next-line no-undef
   return { apiKey: process.env.SHOPIFY_API_KEY || "" };

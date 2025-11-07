@@ -36,10 +36,19 @@ async function getBuild() {
 
 // Vercel serverless function handler
 export default async function handler(req, res) {
+  const requestId = Math.random().toString(36).substring(7);
+  const startTime = Date.now();
+  
+  console.log(`[VERCEL:${requestId}] ===== Request received =====`);
+  console.log(`[VERCEL:${requestId}] URL:`, req.url);
+  console.log(`[VERCEL:${requestId}] Method:`, req.method);
+  console.log(`[VERCEL:${requestId}] Headers:`, Object.keys(req.headers));
+  
   try {
     // Parse the URL path
     const url = new URL(req.url, `https://${req.headers.host}`);
     const urlPath = url.pathname;
+    console.log(`[VERCEL:${requestId}] Path:`, urlPath);
 
     // Skip static assets - these should be served by Vercel directly
     // If they reach here, it means Vercel couldn't find them, so return 404
@@ -50,15 +59,20 @@ export default async function handler(req, res) {
       urlPath === "/favicon.ico" ||
       urlPath.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i)
     ) {
-      console.warn(`Static asset requested but not found: ${urlPath}`);
+      console.warn(`[VERCEL:${requestId}] Static asset requested but not found: ${urlPath}`);
       return res.status(404).end();
     }
+    
+    console.log(`[VERCEL:${requestId}] Processing request for:`, urlPath);
 
     // Install globals first (only once)
+    console.log(`[VERCEL:${requestId}] Installing globals...`);
     await installGlobalsOnce();
+    console.log(`[VERCEL:${requestId}] Globals installed`);
 
     // Lazy load the build and create handler
     if (!handleRequest) {
+      console.log(`[VERCEL:${requestId}] Initializing React Router handler...`);
       // Import createRequestHandler dynamically to avoid ESM/CJS issues
       const reactRouter = await import("react-router");
       const createRequestHandler = reactRouter.createRequestHandler || 
@@ -73,6 +87,7 @@ export default async function handler(req, res) {
       // Use createRequestHandler from react-router package
       // It takes (build, mode) as arguments
       handleRequest = createRequestHandler(build, process.env.NODE_ENV || "production");
+      console.log(`[VERCEL:${requestId}] React Router handler initialized`);
     }
 
     // Build the full URL (reuse the parsed URL from above)
@@ -94,12 +109,20 @@ export default async function handler(req, res) {
     }
 
     const request = new Request(fullUrl, requestInit);
+    console.log(`[VERCEL:${requestId}] Request object created, handling with React Router...`);
 
     // Handle the request with React Router
+    const routerStartTime = Date.now();
     const response = await handleRequest(request);
+    const routerDuration = Date.now() - routerStartTime;
+    console.log(`[VERCEL:${requestId}] React Router handled request (${routerDuration}ms), status: ${response.status}`);
     
     // Convert Response to Vercel's response format
+    const bodyStartTime = Date.now();
     const body = await response.text();
+    const bodyDuration = Date.now() - bodyStartTime;
+    console.log(`[VERCEL:${requestId}] Response body extracted (${bodyDuration}ms), length: ${body.length}`);
+    
     const headers = Object.fromEntries(response.headers.entries());
     
     // Set status and headers
@@ -111,17 +134,24 @@ export default async function handler(req, res) {
       }
     });
     
+    const totalDuration = Date.now() - startTime;
+    console.log(`[VERCEL:${requestId}] ✅ Response sent (total: ${totalDuration}ms)`);
+    console.log(`[VERCEL:${requestId}] ===== Request completed =====`);
+    
     res.send(body);
   } catch (error) {
-    console.error("Error handling request:", error);
-    console.error("Request URL:", req.url);
-    console.error("Error message:", error.message);
+    const totalDuration = Date.now() - startTime;
+    console.error(`[VERCEL:${requestId}] ❌ Error handling request (${totalDuration}ms):`, error);
+    console.error(`[VERCEL:${requestId}] Request URL:`, req.url);
+    console.error(`[VERCEL:${requestId}] Error message:`, error.message);
     if (error.stack) {
-      console.error("Error stack:", error.stack);
+      console.error(`[VERCEL:${requestId}] Error stack:`, error.stack);
     }
+    console.log(`[VERCEL:${requestId}] ===== Request failed =====`);
     res.status(500).json({ 
       error: error.message,
       url: req.url,
+      requestId,
       stack: process.env.NODE_ENV === "development" ? error.stack : undefined
     });
   }
