@@ -132,12 +132,32 @@ export async function createCustomer(
   let response;
   try {
     console.log("[CREATE_CUSTOMER] Making GraphQL request...");
-    console.log("[CREATE_CUSTOMER] Customer data:", JSON.stringify({
+    
+    // Format phone number
+    const formattedPhone = customerData.phone ? formatPhoneNumber(customerData.phone) : undefined;
+    console.log("[CREATE_CUSTOMER] Original phone:", customerData.phone || "none");
+    console.log("[CREATE_CUSTOMER] Formatted phone:", formattedPhone || "none (will not be sent)");
+    
+    // Build input object - only include fields that have values
+    const customerInput: any = {
       firstName: customerData.firstName,
       lastName: customerData.lastName,
-      email: customerData.email ? "***" : undefined,
-      phone: customerData.phone ? "***" : undefined,
+    };
+    
+    if (customerData.email) {
+      customerInput.email = customerData.email;
+    }
+    
+    if (formattedPhone) {
+      customerInput.phone = formattedPhone;
+    }
+    
+    console.log("[CREATE_CUSTOMER] Customer input:", JSON.stringify({
+      ...customerInput,
+      email: customerInput.email ? "***" : undefined,
+      phone: customerInput.phone ? "***" : undefined,
     }));
+    
     response = await admin.graphql(`
       mutation customerCreate($input: CustomerInput!) {
         customerCreate(input: $input) {
@@ -155,12 +175,7 @@ export async function createCustomer(
       }
     `, {
       variables: {
-        input: {
-          firstName: customerData.firstName,
-          lastName: customerData.lastName,
-          email: customerData.email,
-          phone: customerData.phone ? formatPhoneNumber(customerData.phone) : undefined,
-        }
+        input: customerInput
       }
     });
     console.log("[CREATE_CUSTOMER] GraphQL response received, status:", response?.status, response?.ok);
@@ -276,6 +291,14 @@ To fix this:
 
   if (responseJson.data?.customerCreate?.userErrors?.length > 0) {
     const userErrors = responseJson.data.customerCreate.userErrors.map((e: any) => `${e.field}: ${e.message}`).join(", ");
+    console.error("[CREATE_CUSTOMER] User errors from Shopify:", responseJson.data.customerCreate.userErrors);
+    
+    // Provide helpful message for phone validation errors
+    const phoneError = responseJson.data.customerCreate.userErrors.find((e: any) => e.field?.includes("phone"));
+    if (phoneError) {
+      throw new Error(`Invalid phone number. Please use E.164 format (e.g., +1234567890) or a valid 10-digit North American number. Original: ${customerData.phone || "none"}`);
+    }
+    
     throw new Error(`Customer creation errors: ${userErrors}`);
   }
 

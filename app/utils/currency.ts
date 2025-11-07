@@ -27,25 +27,64 @@ export function formatCurrency(amount: number | string | null | undefined): stri
 }
 
 /**
- * Formats a phone number by removing non-digits and applying basic formatting
+ * Formats a phone number for Shopify API
+ * Shopify requires E.164 format (e.g., +1234567890) or valid digit-only format
  * @param phone - The phone number string to format
- * @returns Formatted phone number (e.g., "+1234567890" or "1234567890")
+ * @returns Formatted phone number in E.164 format, or undefined if invalid/empty
  */
 export function formatPhoneNumber(phone: string | null | undefined): string | undefined {
   if (!phone) {
     return undefined;
   }
   
-  // Remove all non-digit characters except +
-  const cleaned = phone.replace(/[^\d+]/g, "");
+  // Remove all whitespace and non-digit characters except +
+  const cleaned = phone.trim().replace(/[^\d+]/g, "");
   
-  // If it starts with +, keep it; otherwise ensure it's just digits
-  if (cleaned.startsWith("+")) {
-    return cleaned;
+  // If empty after cleaning, return undefined
+  if (!cleaned || cleaned === "+") {
+    return undefined;
   }
   
-  // Return cleaned digits (Shopify will handle formatting)
-  return cleaned;
+  // If it already starts with +, validate it's in E.164 format
+  if (cleaned.startsWith("+")) {
+    // E.164 format: + followed by 1-15 digits
+    const digitsAfterPlus = cleaned.substring(1);
+    if (digitsAfterPlus.length >= 1 && digitsAfterPlus.length <= 15 && /^\d+$/.test(digitsAfterPlus)) {
+      return cleaned;
+    }
+    // Invalid E.164 format
+    console.warn(`Invalid phone number format (E.164): ${phone} -> ${cleaned}`);
+    return undefined;
+  }
+  
+  // If it's just digits, try to format it
+  // For North American numbers (10 digits), assume +1 country code
+  if (/^\d+$/.test(cleaned)) {
+    // If it's 10 digits (North American), add +1
+    if (cleaned.length === 10) {
+      return `+1${cleaned}`;
+    }
+    // If it's 11 digits and starts with 1 (North American), add +
+    if (cleaned.length === 11 && cleaned.startsWith("1")) {
+      return `+${cleaned}`;
+    }
+    // If it's 7-15 digits, assume it's a valid international number without country code
+    // But Shopify might reject this, so let's be conservative
+    if (cleaned.length >= 7 && cleaned.length <= 15) {
+      // Try to add + if it looks like it might be international
+      // But this is risky - better to return undefined for ambiguous cases
+      console.warn(`Ambiguous phone number format: ${phone} -> ${cleaned}. Please use E.164 format (+countrycode+number)`);
+      return undefined;
+    }
+    
+    // Too short or too long
+    console.warn(`Invalid phone number length: ${phone} -> ${cleaned} (${cleaned.length} digits)`);
+    return undefined;
+  }
+  
+  // Contains invalid characters
+  console.warn(`Invalid phone number characters: ${phone} -> ${cleaned}`);
+  return undefined;
 }
 
 /**
