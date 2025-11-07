@@ -1,14 +1,25 @@
 // Vercel serverless function for React Router v7
 // This handles all routes and serves the React Router app
 
-import { installGlobals } from "@react-router/node";
-
-// Install fetch and other globals for Node.js
-installGlobals();
+// Use dynamic imports to avoid ESM/CJS interop issues on Vercel
 
 // Lazy load the build to avoid issues during cold starts
 let handleRequest;
 let buildPromise;
+let globalsInstalled = false;
+
+async function installGlobalsOnce() {
+  if (!globalsInstalled) {
+    // Dynamically import to avoid ESM/CJS issues
+    const nodeModule = await import("@react-router/node");
+    if (nodeModule.installGlobals) {
+      nodeModule.installGlobals();
+    } else if (nodeModule.default && nodeModule.default.installGlobals) {
+      nodeModule.default.installGlobals();
+    }
+    globalsInstalled = true;
+  }
+}
 
 async function getBuild() {
   if (!buildPromise) {
@@ -26,6 +37,9 @@ async function getBuild() {
 // Vercel serverless function handler
 export default async function handler(req, res) {
   try {
+    // Install globals first (only once)
+    await installGlobalsOnce();
+
     // Skip static assets - these should be served by Vercel directly
     if (req.url.startsWith("/build/") || req.url.startsWith("/_build/")) {
       return res.status(404).end();
@@ -34,7 +48,15 @@ export default async function handler(req, res) {
     // Lazy load the build and create handler
     if (!handleRequest) {
       // Import createRequestHandler dynamically to avoid ESM/CJS issues
-      const { createRequestHandler } = await import("react-router");
+      const reactRouter = await import("react-router");
+      const createRequestHandler = reactRouter.createRequestHandler || 
+                                   (reactRouter.default && reactRouter.default.createRequestHandler) ||
+                                   reactRouter.default;
+      
+      if (!createRequestHandler) {
+        throw new Error('createRequestHandler not found in react-router. Available exports: ' + Object.keys(reactRouter).join(', '));
+      }
+
       const build = await getBuild();
       // Use createRequestHandler from react-router package
       // It takes (build, mode) as arguments
