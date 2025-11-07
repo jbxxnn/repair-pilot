@@ -104,7 +104,14 @@ export async function createCustomer(
     phone?: string;
   }
 ): Promise<Customer> {
-  const { admin } = await authenticate.admin(request);
+  const { admin, session } = await authenticate.admin(request);
+  
+  // Check if session has the required scope
+  if (session && !session.scope?.includes('write_customers')) {
+    const errorMessage = `Missing 'write_customers' scope. Please re-authorize the app to grant this permission. To fix this: 1) Go to your Shopify admin, 2) Navigate to Apps → Repair Pilot, 3) Click 'Manage app access' or reinstall the app, 4) Grant the 'write_customers' permission.`;
+    console.error(errorMessage);
+    throw new Error(errorMessage);
+  }
   
   const response = await admin.graphql(`
     mutation customerCreate($input: CustomerInput!) {
@@ -135,14 +142,29 @@ export async function createCustomer(
   const responseJson = await response.json();
   
   if (responseJson.errors) {
-    throw new Error(`GraphQL errors: ${JSON.stringify(responseJson.errors)}`);
+    const errorMessages = responseJson.errors.map((e: any) => e.message || JSON.stringify(e)).join(", ");
+    
+    // Check for scope-related errors
+    if (errorMessages.includes("write_customers") || errorMessages.includes("Access denied")) {
+      const scopeError = `Missing 'write_customers' scope. Please re-authorize the app to grant this permission. To fix this: 1) Go to your Shopify admin, 2) Navigate to Apps → Repair Pilot, 3) Click 'Manage app access' or reinstall the app, 4) Grant the 'write_customers' permission.`;
+      console.error(scopeError);
+      throw new Error(scopeError);
+    }
+    
+    throw new Error(`GraphQL errors: ${errorMessages}`);
   }
 
   if (responseJson.data?.customerCreate?.userErrors?.length > 0) {
-    throw new Error(`Customer creation errors: ${JSON.stringify(responseJson.data.customerCreate.userErrors)}`);
+    const userErrors = responseJson.data.customerCreate.userErrors.map((e: any) => `${e.field}: ${e.message}`).join(", ");
+    throw new Error(`Customer creation errors: ${userErrors}`);
   }
 
-  return responseJson.data?.customerCreate?.customer;
+  const customer = responseJson.data?.customerCreate?.customer;
+  if (!customer) {
+    throw new Error("Customer creation failed: No customer returned from API");
+  }
+
+  return customer;
 }
 
 /**
