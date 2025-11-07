@@ -195,8 +195,22 @@ function Modal() {
       };
 
       console.log("Ticket data:", ticketData);
-      console.log("Making request to:", `${APP_URL}/api/tickets/create`);
-      const response = await fetch(`${APP_URL}/api/tickets/create`, {
+      
+      // Try to get shop domain from POS environment if available
+      let apiUrl = `${APP_URL}/api/tickets/create`;
+      try {
+        // In POS, we can get shop info from the environment
+        if (typeof shopify !== 'undefined' && shopify?.environment?.store) {
+          const shopDomain = shopify.environment.store;
+          apiUrl = `${APP_URL}/api/tickets/create?shop=${encodeURIComponent(shopDomain)}`;
+          console.log("Using shop domain from POS environment:", shopDomain);
+        }
+      } catch (e) {
+        console.log("Could not get shop domain from POS environment:", e);
+      }
+      
+      console.log("Making request to:", apiUrl);
+      const response = await fetch(apiUrl, {
         method: 'POST',
         credentials: 'include',
         headers: {

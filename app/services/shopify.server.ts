@@ -119,6 +119,11 @@ export async function createCustomer(
   
   console.log("[CREATE_CUSTOMER] Session scopes array:", sessionScopes);
   console.log("[CREATE_CUSTOMER] Has write_customers scope:", hasWriteCustomers);
+  console.log("[CREATE_CUSTOMER] Admin object type:", typeof admin);
+  console.log("[CREATE_CUSTOMER] Admin.graphql type:", typeof admin.graphql);
+  console.log("[CREATE_CUSTOMER] Session accessToken exists:", !!session?.accessToken);
+  console.log("[CREATE_CUSTOMER] Session isOnline:", session?.isOnline);
+  console.log("[CREATE_CUSTOMER] Session expires:", session?.expires);
   
   // Don't block here - let the API call happen and check the actual error
   // The API will return a more accurate error if the scope is truly missing
@@ -126,6 +131,13 @@ export async function createCustomer(
   // Make the GraphQL call
   let response;
   try {
+    console.log("[CREATE_CUSTOMER] Making GraphQL request...");
+    console.log("[CREATE_CUSTOMER] Customer data:", JSON.stringify({
+      firstName: customerData.firstName,
+      lastName: customerData.lastName,
+      email: customerData.email ? "***" : undefined,
+      phone: customerData.phone ? "***" : undefined,
+    }));
     response = await admin.graphql(`
       mutation customerCreate($input: CustomerInput!) {
         customerCreate(input: $input) {
@@ -151,25 +163,90 @@ export async function createCustomer(
         }
       }
     });
+    console.log("[CREATE_CUSTOMER] GraphQL response received, status:", response?.status, response?.ok);
   } catch (graphqlError: any) {
-    console.error("[CREATE_CUSTOMER] GraphQL call failed:", graphqlError);
+    console.error("[CREATE_CUSTOMER] GraphQL call threw an error:", graphqlError);
     console.error("[CREATE_CUSTOMER] Error type:", typeof graphqlError);
-    console.error("[CREATE_CUSTOMER] Error message:", graphqlError?.message);
+    console.error("[CREATE_CUSTOMER] Error constructor:", graphqlError?.constructor?.name);
     
-    // If it's a scope error, provide helpful message
-    if (graphqlError?.message?.includes("write_customers") || graphqlError?.message?.includes("Access denied")) {
-      throw new Error(`Missing 'write_customers' scope. Your current session only has: ${session?.scope || 'none'}. Please delete the old session and reinstall the app to get the new scopes.`);
+    // Check if it's a Response object
+    if (graphqlError instanceof Response) {
+      console.error("[CREATE_CUSTOMER] Error is a Response object, status:", graphqlError.status);
+      console.error("[CREATE_CUSTOMER] Response statusText:", graphqlError.statusText);
+      console.error("[CREATE_CUSTOMER] Response headers:", Object.fromEntries(graphqlError.headers.entries()));
+      
+      // Try to read the response body if possible
+      try {
+        const errorText = await graphqlError.clone().text();
+        console.error("[CREATE_CUSTOMER] Response body:", errorText);
+        
+        if (graphqlError.status === 401) {
+          throw new Error(`Authentication failed (401). The access token may be invalid or expired. Please reinstall the app to refresh the access token. Response: ${errorText}`);
+        }
+        
+        throw new Error(`GraphQL request failed with status ${graphqlError.status}: ${errorText}`);
+      } catch (readError) {
+        if (graphqlError.status === 401) {
+          throw new Error(`Authentication failed (401). The access token may be invalid or expired. Please reinstall the app to refresh the access token.`);
+        }
+        throw new Error(`GraphQL request failed with status ${graphqlError.status}: ${graphqlError.statusText}`);
+      }
     }
     
-    throw graphqlError;
+    // If it's an Error object
+    if (graphqlError instanceof Error) {
+      console.error("[CREATE_CUSTOMER] Error message:", graphqlError.message);
+      console.error("[CREATE_CUSTOMER] Error stack:", graphqlError.stack);
+      
+      // If it's a scope error, provide helpful message
+      if (graphqlError.message?.includes("write_customers") || graphqlError.message?.includes("Access denied")) {
+        throw new Error(`Missing 'write_customers' scope. Your current session only has: ${session?.scope || 'none'}. Please delete the old session and reinstall the app to get the new scopes.`);
+      }
+      
+      throw graphqlError;
+    }
+    
+    // Unknown error type
+    throw new Error(`Unknown GraphQL error: ${JSON.stringify(graphqlError)}`);
   }
 
-  if (!response || !response.ok) {
-    console.error("[CREATE_CUSTOMER] Response not OK:", response?.status, response?.statusText);
-    throw new Error(`GraphQL request failed: ${response?.status} ${response?.statusText}`);
+  // Check if response is valid
+  if (!response) {
+    throw new Error("GraphQL request returned no response");
   }
 
-  const responseJson = await response.json();
+  if (!response.ok) {
+    console.error("[CREATE_CUSTOMER] Response not OK:", response.status, response.statusText);
+    console.error("[CREATE_CUSTOMER] Response URL:", response.url);
+    console.error("[CREATE_CUSTOMER] Response headers:", Object.fromEntries(response.headers.entries()));
+    
+    // Try to read error response body
+    let errorBody = "";
+    try {
+      errorBody = await response.clone().text();
+      console.error("[CREATE_CUSTOMER] Response body:", errorBody);
+    } catch (readError) {
+      console.error("[CREATE_CUSTOMER] Could not read response body:", readError);
+    }
+    
+    if (response.status === 401) {
+      throw new Error(`Authentication failed (401). The access token may be invalid or expired. Session ID: ${session?.id}, Shop: ${session?.shop}. Please reinstall the app to refresh the access token. Response: ${errorBody || response.statusText}`);
+    }
+    
+    throw new Error(`GraphQL request failed: ${response.status} ${response.statusText}. Response: ${errorBody}`);
+  }
+
+  // Parse response
+  let responseJson;
+  try {
+    responseJson = await response.json();
+    console.log("[CREATE_CUSTOMER] Response JSON parsed successfully");
+  } catch (jsonError) {
+    console.error("[CREATE_CUSTOMER] Failed to parse response as JSON:", jsonError);
+    const responseText = await response.clone().text();
+    console.error("[CREATE_CUSTOMER] Response text:", responseText);
+    throw new Error(`Failed to parse GraphQL response as JSON: ${jsonError instanceof Error ? jsonError.message : String(jsonError)}. Response: ${responseText}`);
+  }
   
   if (responseJson.errors) {
     const errorMessages = responseJson.errors.map((e: any) => e.message || JSON.stringify(e)).join(", ");
