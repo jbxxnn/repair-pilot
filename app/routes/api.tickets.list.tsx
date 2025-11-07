@@ -39,13 +39,41 @@ export interface GetTicketsResponse {
 
 export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response> => {
   console.log("Tickets list loader called");
+  console.log("Request URL:", request.url);
+  console.log("Request headers:", Object.fromEntries(request.headers.entries()));
+  
   try {
+    // Test database connection
+    try {
+      // Prisma automatically connects, but we can test with a simple query
+      await prisma.$queryRaw`SELECT 1`;
+      console.log("Database connection verified");
+    } catch (dbError) {
+      console.error("Database connection error:", dbError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: `Database connection failed: ${dbError instanceof Error ? dbError.message : "Unknown error"}. Please check your DATABASE_URL environment variable.` 
+      }), {
+        status: 500,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
     const { session } = await authenticate.admin(request);
     console.log("Session:", session?.shop);
+    console.log("Session exists:", !!session);
 
     if (!session) {
       console.log("No session found");
-      return new Response(JSON.stringify({ success: false, error: "Authentication required" }), {
+      // Try to get shop from query parameter as fallback
+      const url = new URL(request.url);
+      const shopFromQuery = url.searchParams.get("shop");
+      console.log("Shop from query:", shopFromQuery);
+      
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Authentication required. Please ensure you're accessing this app through Shopify Admin." 
+      }), {
         status: 401,
         headers: { "Content-Type": "application/json" }
       });
