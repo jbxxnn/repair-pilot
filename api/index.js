@@ -37,13 +37,25 @@ async function getBuild() {
 // Vercel serverless function handler
 export default async function handler(req, res) {
   try {
-    // Install globals first (only once)
-    await installGlobalsOnce();
+    // Parse the URL path
+    const url = new URL(req.url, `https://${req.headers.host}`);
+    const urlPath = url.pathname;
 
     // Skip static assets - these should be served by Vercel directly
-    if (req.url.startsWith("/build/") || req.url.startsWith("/_build/")) {
+    // If they reach here, it means Vercel couldn't find them, so return 404
+    if (
+      urlPath.startsWith("/assets/") ||
+      urlPath.startsWith("/build/") ||
+      urlPath.startsWith("/_build/") ||
+      urlPath === "/favicon.ico" ||
+      urlPath.match(/\.(js|css|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot|map)$/i)
+    ) {
+      console.warn(`Static asset requested but not found: ${urlPath}`);
       return res.status(404).end();
     }
+
+    // Install globals first (only once)
+    await installGlobalsOnce();
 
     // Lazy load the build and create handler
     if (!handleRequest) {
@@ -63,10 +75,8 @@ export default async function handler(req, res) {
       handleRequest = createRequestHandler(build, process.env.NODE_ENV || "production");
     }
 
-    // Build the full URL
-    const protocol = req.headers['x-forwarded-proto'] || 'https';
-    const host = req.headers.host;
-    const url = `${protocol}://${host}${req.url}`;
+    // Build the full URL (reuse the parsed URL from above)
+    const fullUrl = url.toString();
     
     // Create a Web API Request object
     const requestInit = {
@@ -83,7 +93,7 @@ export default async function handler(req, res) {
       }
     }
 
-    const request = new Request(url, requestInit);
+    const request = new Request(fullUrl, requestInit);
 
     // Handle the request with React Router
     const response = await handleRequest(request);

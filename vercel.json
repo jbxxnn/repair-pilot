@@ -2,7 +2,20 @@
   "buildCommand": "npm run build",
   "installCommand": "npm install",
   "framework": null,
+  "outputDirectory": "build/client",
   "rewrites": [
+    {
+      "source": "/assets/:path*",
+      "destination": "/assets/:path*"
+    },
+    {
+      "source": "/build/:path*",
+      "destination": "/build/:path*"
+    },
+    {
+      "source": "/favicon.ico",
+      "destination": "/favicon.ico"
+    },
     {
       "source": "/(.*)",
       "destination": "/api"
