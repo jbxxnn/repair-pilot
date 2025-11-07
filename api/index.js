@@ -2,7 +2,6 @@
 // This handles all routes and serves the React Router app
 
 import { installGlobals } from "@react-router/node";
-import { createRequestHandler } from "@react-router/node";
 
 // Install fetch and other globals for Node.js
 installGlobals();
@@ -32,13 +31,14 @@ export default async function handler(req, res) {
       return res.status(404).end();
     }
 
-    // Lazy load the build
+    // Lazy load the build and create handler
     if (!handleRequest) {
+      // Import createRequestHandler dynamically to avoid ESM/CJS issues
+      const { createRequestHandler } = await import("react-router");
       const build = await getBuild();
-      handleRequest = createRequestHandler({
-        build,
-        mode: process.env.NODE_ENV || "production",
-      });
+      // Use createRequestHandler from react-router package
+      // It takes (build, mode) as arguments
+      handleRequest = createRequestHandler(build, process.env.NODE_ENV || "production");
     }
 
     // Build the full URL
@@ -94,4 +94,3 @@ export default async function handler(req, res) {
     });
   }
 }
-
