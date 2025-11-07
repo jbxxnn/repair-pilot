@@ -2,6 +2,19 @@ import '@shopify/ui-extensions/preact';
 import { render } from 'preact';
 import { useState, useEffect } from 'preact/hooks';
 
+// Get the app URL - use production URL, will be overridden in development by Shopify CLI
+const getAppUrl = () => {
+  // In POS extensions, we can try to get the app URL from the environment
+  // If not available, fall back to production URL
+  if (typeof shopify !== 'undefined' && shopify?.environment?.appUrl) {
+    return shopify.environment.appUrl;
+  }
+  // Production URL - this should match your shopify.app.toml application_url
+  return 'https://repair-pilot.vercel.app';
+};
+
+const APP_URL = getAppUrl();
+
 function Modal() {
   // Customer state
   const [customerMode, setCustomerMode] = useState('search'); // 'search' or 'create'
@@ -59,7 +72,12 @@ function Modal() {
     const fetchTechnicians = async () => {
       setLoadingTechnicians(true);
       try {
-        const response = await fetch('/api/technicians?activeOnly=true');
+        const response = await fetch(`${APP_URL}/api/technicians?activeOnly=true`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
         if (response.ok) {
           const data = await response.json();
           setTechnicians(data.technicians || []);
@@ -90,8 +108,9 @@ function Modal() {
     const timeoutId = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const response = await fetch('/api/tickets/search-customers', {
+        const response = await fetch(`${APP_URL}/api/tickets/search-customers`, {
           method: 'POST',
+          credentials: 'include',
           headers: {
             'Content-Type': 'application/json',
           },
@@ -152,8 +171,7 @@ function Modal() {
 
     try {
       console.log("Attempting ticket creation...");
-      console.log("Window location:", window.location);
-      console.log("Window origin:", window.location.origin);
+      console.log("App URL:", APP_URL);
       
       const ticketData = {
         // Customer data
@@ -177,9 +195,10 @@ function Modal() {
       };
 
       console.log("Ticket data:", ticketData);
-      console.log("Making request to: /api/tickets/create");
-      const response = await fetch('/api/tickets/create', {
+      console.log("Making request to:", `${APP_URL}/api/tickets/create`);
+      const response = await fetch(`${APP_URL}/api/tickets/create`, {
         method: 'POST',
+        credentials: 'include',
         headers: {
           'Content-Type': 'application/json',
         },

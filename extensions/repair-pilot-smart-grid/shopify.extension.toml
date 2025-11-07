@@ -7,7 +7,7 @@ uid = "6cbac05e-6880-4b89-491c-7c1064f17eec7d27f582"
 handle = "repair-pilot-smart-grid"
 description = "A preact POS UI extension"
 
-# module: file that contains your extension’s source code
+# module: file that contains your extension's source code
 # target: location where your extension appears in POS
 [[extensions.targeting]]
 module = "./src/Tile.jsx"

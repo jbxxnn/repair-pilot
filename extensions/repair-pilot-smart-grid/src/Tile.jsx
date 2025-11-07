@@ -8,7 +8,7 @@ function Tile() {
       // This calls your pos.home.modal.render target (if configured)
       shopify?.action?.presentModal?.();
     } catch (e) {
-      // Safe fallback so dev doesn’t crash silently
+      // Safe fallback so dev doesn't crash silently
       console.warn('presentModal failed:', e);
     }
   };
