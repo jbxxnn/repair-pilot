@@ -123,31 +123,51 @@ export async function createCustomer(
   // Don't block here - let the API call happen and check the actual error
   // The API will return a more accurate error if the scope is truly missing
   
-  const response = await admin.graphql(`
-    mutation customerCreate($input: CustomerInput!) {
-      customerCreate(input: $input) {
-        customer {
-          id
-          displayName
-          email
-          phone
-        }
-        userErrors {
-          field
-          message
+  // Make the GraphQL call
+  let response;
+  try {
+    response = await admin.graphql(`
+      mutation customerCreate($input: CustomerInput!) {
+        customerCreate(input: $input) {
+          customer {
+            id
+            displayName
+            email
+            phone
+          }
+          userErrors {
+            field
+            message
+          }
         }
       }
-    }
-  `, {
-    variables: {
-      input: {
-        firstName: customerData.firstName,
-        lastName: customerData.lastName,
-        email: customerData.email,
-        phone: customerData.phone ? formatPhoneNumber(customerData.phone) : undefined,
+    `, {
+      variables: {
+        input: {
+          firstName: customerData.firstName,
+          lastName: customerData.lastName,
+          email: customerData.email,
+          phone: customerData.phone ? formatPhoneNumber(customerData.phone) : undefined,
+        }
       }
+    });
+  } catch (graphqlError: any) {
+    console.error("[CREATE_CUSTOMER] GraphQL call failed:", graphqlError);
+    console.error("[CREATE_CUSTOMER] Error type:", typeof graphqlError);
+    console.error("[CREATE_CUSTOMER] Error message:", graphqlError?.message);
+    
+    // If it's a scope error, provide helpful message
+    if (graphqlError?.message?.includes("write_customers") || graphqlError?.message?.includes("Access denied")) {
+      throw new Error(`Missing 'write_customers' scope. Your current session only has: ${session?.scope || 'none'}. Please delete the old session and reinstall the app to get the new scopes.`);
     }
-  });
+    
+    throw graphqlError;
+  }
+
+  if (!response || !response.ok) {
+    console.error("[CREATE_CUSTOMER] Response not OK:", response?.status, response?.statusText);
+    throw new Error(`GraphQL request failed: ${response?.status} ${response?.statusText}`);
+  }
 
   const responseJson = await response.json();
   

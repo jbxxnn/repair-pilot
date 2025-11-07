@@ -259,9 +259,26 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
     console.error("Error creating ticket:", error);
     console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace");
     
+    // Check if it's a scope error
+    const errorMessage = error instanceof Error ? error.message : "Unknown error occurred";
+    if (errorMessage.includes("write_customers") || errorMessage.includes("Access denied")) {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: errorMessage,
+        scopeIssue: true,
+        solution: "Your session has outdated scopes. Please: 1) Visit /api/clear-session in your browser to clear the old session, 2) Reinstall the app, 3) Ensure SCOPES env var in Vercel matches shopify.app.toml"
+      }), { 
+        status: 403, // 403 Forbidden is more appropriate for scope issues
+        headers: { 
+          "Content-Type": "application/json",
+          "Access-Control-Allow-Origin": "*",
+        } 
+      });
+    }
+    
     return new Response(JSON.stringify({ 
       success: false, 
-      error: error instanceof Error ? error.message : "Unknown error occurred",
+      error: errorMessage,
       details: error instanceof Error ? error.stack : undefined
     }), { 
       status: 500, 
