@@ -3,7 +3,7 @@
 client_id = "66d6139c7c92969b5f20a6a5ebe84416"
 name = "repairpilot"
 # Update this to your production URL before deploying
-application_url = "https://example.com"
+application_url = "https://repair-pilot.vercel.app"
 embedded = true
 
 [build]
@@ -28,4 +28,4 @@ scopes = "write_products,write_customers,read_customers,write_draft_orders,write
 
 [auth]
 # Update this to your production URL before deploying
-redirect_urls = [ "https://example.com/api/auth" ]
+redirect_urls = [ "https://repair-pilot.vercel.app/api/auth" ]
