@@ -106,12 +106,22 @@ export async function createCustomer(
 ): Promise<Customer> {
   const { admin, session } = await authenticate.admin(request);
   
-  // Check if session has the required scope
-  if (session && !session.scope?.includes('write_customers')) {
-    const errorMessage = `Missing 'write_customers' scope. Please re-authorize the app to grant this permission. To fix this: 1) Go to your Shopify admin, 2) Navigate to Apps → Repair Pilot, 3) Click 'Manage app access' or reinstall the app, 4) Grant the 'write_customers' permission.`;
-    console.error(errorMessage);
-    throw new Error(errorMessage);
-  }
+  // Log session scope for debugging
+  console.log("[CREATE_CUSTOMER] Session scope:", session?.scope);
+  console.log("[CREATE_CUSTOMER] Session scope type:", typeof session?.scope);
+  console.log("[CREATE_CUSTOMER] Required scopes from env:", process.env.SCOPES);
+  
+  // Check if session has the required scope (scope can be a string or array)
+  const sessionScopes = session?.scope 
+    ? (typeof session.scope === 'string' ? session.scope.split(',') : session.scope)
+    : [];
+  const hasWriteCustomers = sessionScopes.some((s: string) => s.trim().includes('write_customers'));
+  
+  console.log("[CREATE_CUSTOMER] Session scopes array:", sessionScopes);
+  console.log("[CREATE_CUSTOMER] Has write_customers scope:", hasWriteCustomers);
+  
+  // Don't block here - let the API call happen and check the actual error
+  // The API will return a more accurate error if the scope is truly missing
   
   const response = await admin.graphql(`
     mutation customerCreate($input: CustomerInput!) {
@@ -143,11 +153,24 @@ export async function createCustomer(
   
   if (responseJson.errors) {
     const errorMessages = responseJson.errors.map((e: any) => e.message || JSON.stringify(e)).join(", ");
+    console.error("[CREATE_CUSTOMER] GraphQL errors:", responseJson.errors);
+    console.error("[CREATE_CUSTOMER] Error messages:", errorMessages);
     
     // Check for scope-related errors
-    if (errorMessages.includes("write_customers") || errorMessages.includes("Access denied")) {
-      const scopeError = `Missing 'write_customers' scope. Please re-authorize the app to grant this permission. To fix this: 1) Go to your Shopify admin, 2) Navigate to Apps → Repair Pilot, 3) Click 'Manage app access' or reinstall the app, 4) Grant the 'write_customers' permission.`;
-      console.error(scopeError);
+    if (errorMessages.includes("write_customers") || errorMessages.includes("Access denied") || errorMessages.includes("access scope")) {
+      const scopeError = `Missing 'write_customers' scope. 
+      
+Current session scopes: ${session?.scope || 'none'}
+Required scopes in config: ${process.env.SCOPES || 'not set'}
+Scopes in shopify.app.toml: write_products,write_customers,read_customers,write_draft_orders,write_files
+
+To fix this:
+1. Verify the SCOPES environment variable in Vercel includes 'write_customers'
+2. Redeploy the app on Vercel after updating SCOPES
+3. Run 'shopify app deploy' to sync scopes with Shopify Partners
+4. Uninstall and reinstall the app on your Shopify store
+5. During reinstall, ensure all permissions are granted`;
+      console.error("[CREATE_CUSTOMER] Scope error:", scopeError);
       throw new Error(scopeError);
     }
     
