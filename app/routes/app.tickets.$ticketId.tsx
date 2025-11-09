@@ -832,6 +832,7 @@ export default function TicketDetail() {
 
                       const uploadResponse = await fetch("/api/photos/upload", {
                         method: "POST",
+                        credentials: "include",
                         body: formData,
                       });
 
@@ -845,6 +846,7 @@ export default function TicketDetail() {
 
                       const addResponse = await fetch("/api/tickets/add-photos", {
                         method: "POST",
+                        credentials: "include",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           ticketId: currentTicket.id,
