@@ -66,12 +66,24 @@ function Modal() {
   const close = async () => {
     try {
       if (shopify?.navigation?.closeModal) {
+        console.log('Attempting shopify.navigation.closeModal');
         await shopify.navigation.closeModal();
         return;
       }
-      if (shopify?.extension?.close) {
-        await shopify.extension.close();
+
+      if (shopify?.action?.dismissModal) {
+        console.log('Attempting shopify.action.dismissModal');
+        await shopify.action.dismissModal();
+        return;
       }
+
+      if (shopify?.extension?.close) {
+        console.log('Attempting shopify.extension.close');
+        await shopify.extension.close();
+        return;
+      }
+
+      console.warn('No modal close API available on shopify object.');
     } catch (e) {
       console.error('closeModal failed', e);
     }
