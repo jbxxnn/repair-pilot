@@ -1,5 +1,4 @@
 import type { ActionFunctionArgs } from "react-router";
-import { unstable_parseMultipartFormData as parseMultipartFormData, unstable_createMemoryUploadHandler as createMemoryUploadHandler } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { uploadPhotos } from "../services/shopify.server";
 
@@ -33,14 +32,9 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
       });
     }
 
-    // Use Remix multipart parser to reliably handle edge runtime streams
-    const uploadHandler = createMemoryUploadHandler({
-      maxPartSize: 10 * 1024 * 1024, // 10 MB per file limit
-    });
-
     let formData: FormData;
     try {
-      formData = await parseMultipartFormData(request, uploadHandler);
+      formData = await request.formData();
     } catch (parseError) {
       console.error("[PHOTO_UPLOAD] Failed to parse form data:", parseError);
       return new Response(
