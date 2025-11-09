@@ -65,6 +65,16 @@ function Modal() {
 
   const close = () => {
     let closed = false;
+
+    try {
+      if (shopify?.action?.closeModal) {
+        shopify.action.closeModal();
+        closed = true;
+      }
+    } catch (e) {
+      console.error('action.closeModal failed', e);
+    }
+
     try {
       if (shopify?.navigation?.closeModal) {
         shopify.navigation.closeModal();
@@ -263,13 +273,15 @@ function Modal() {
         const ticketMessage = ticketSuffix
           ? `Repair ticket created successfully. Ticket ID ending ${ticketSuffix}.`
           : 'Repair ticket created successfully.';
-        shopify?.toast?.show?.(ticketMessage);
+        const toastParts = [ticketMessage];
 
         if (result.intakeInvoiceUrl) {
-          shopify?.toast?.show?.('Deposit invoice created and sent to customer.');
+          toastParts.push('Deposit invoice created and sent to customer.');
         } else if (result.draftOrderId) {
-          shopify?.toast?.show?.('Deposit draft order created for payment.');
+          toastParts.push('Deposit draft order created for payment.');
         }
+
+        shopify?.toast?.show?.(toastParts.join(' '));
 
         resetForm();
         close();
