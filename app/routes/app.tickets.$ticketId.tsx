@@ -8,6 +8,7 @@ import { formatCurrency } from "../utils/currency";
 import type { Ticket } from "./api.tickets.list";
 import prisma from "../db.server";
 import { getStaffMember } from "../services/shopify.server";
+import type { CSSProperties, ComponentType } from "react";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -108,7 +109,7 @@ export default function TicketDetail() {
   const [confirmationDialog, setConfirmationDialog] = useState<{ show: boolean; message: string; onConfirm: () => void; onCancel: () => void } | null>(null);
   const [orderStatuses, setOrderStatuses] = useState<Record<string, { status: string | null; isPaid: boolean; financialStatus: string | null; orderName: string | null }>>({});
   const [loadingOrderStatuses, setLoadingOrderStatuses] = useState(false);
-  const [QRCodeComponent, setQRCodeComponent] = useState<React.ComponentType<{ value: string; size: number; level: string; includeMargin: boolean; className: string }> | null>(null);
+  const [QRCodeComponent, setQRCodeComponent] = useState<ComponentType<{ value: string; size: number; level: string; includeMargin: boolean; className: string }> | null>(null);
   
   // Generate QR code URL with shop domain for proper authentication
   const qrCodeUrl = typeof window !== "undefined" 
@@ -741,6 +742,13 @@ export default function TicketDetail() {
     }
   };
 
+  const partFormGridStyle: CSSProperties = {
+    display: "grid",
+    gap: "1rem",
+    alignItems: "end",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+  };
+
   return (
     <s-page heading={`Ticket #${displayTicketId}`}>
       <div style={{ marginBottom: "1.5rem" }}>
@@ -980,7 +988,7 @@ export default function TicketDetail() {
                 {showAddPart && (
                   <div style={{ padding: "1.25rem", background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)", borderRadius: "12px", marginBottom: "1rem", border: "2px solid #0ea5e9", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
                     <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleAddPart(e); }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: "1rem", alignItems: "end" }}>
+                      <div style={partFormGridStyle}>
                         <div>
                           <label style={{ fontSize: "12px", color: "#0c4a6e", fontWeight: "600", display: "block", marginBottom: "0.5rem" }}>Part Name</label>
                           <input 
@@ -1073,7 +1081,7 @@ export default function TicketDetail() {
                         {editingPart === part.id ? (
                           <div style={{ padding: "1.25rem", background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)", borderRadius: "12px", border: "2px solid #f59e0b", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
                             <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleUpdatePart(part.id, e); }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: "1rem", alignItems: "end" }}>
+                              <div style={partFormGridStyle}>
                                 <div>
                                   <label style={{ fontSize: "12px", color: "#78350f", fontWeight: "600", display: "block", marginBottom: "0.5rem" }}>Part Name</label>
                                   <input 
