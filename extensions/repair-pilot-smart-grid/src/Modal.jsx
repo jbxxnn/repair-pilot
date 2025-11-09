@@ -15,6 +15,26 @@ const getAppUrl = () => {
 
 const APP_URL = getAppUrl();
 
+const createInitialNewCustomer = () => ({
+  firstName: '',
+  lastName: '',
+  email: '',
+  phone: '',
+});
+
+const createInitialDeviceInfo = () => ({
+  type: '',
+  brand: '',
+  model: '',
+  serial: '',
+  issueDescription: '',
+});
+
+const createInitialFinancialInfo = () => ({
+  quotedAmount: '',
+  depositAmount: '',
+});
+
 function Modal() {
   // Customer state
   const [customerMode, setCustomerMode] = useState('search'); // 'search' or 'create'
@@ -24,27 +44,13 @@ function Modal() {
   const [isSearching, setIsSearching] = useState(false);
   
   // New customer form
-  const [newCustomer, setNewCustomer] = useState({
-    firstName: '',
-    lastName: '',
-    email: '',
-    phone: ''
-  });
+  const [newCustomer, setNewCustomer] = useState(createInitialNewCustomer);
 
   // Device state
-  const [deviceInfo, setDeviceInfo] = useState({
-    type: '',
-    brand: '',
-    model: '',
-    serial: '',
-    issueDescription: ''
-  });
+  const [deviceInfo, setDeviceInfo] = useState(createInitialDeviceInfo);
 
   // Financial state
-  const [financialInfo, setFinancialInfo] = useState({
-    quotedAmount: '',
-    depositAmount: ''
-  });
+  const [financialInfo, setFinancialInfo] = useState(createInitialFinancialInfo);
 
   // Technician state
   const [technicians, setTechnicians] = useState([]);
@@ -58,11 +64,40 @@ function Modal() {
   const [errors, setErrors] = useState({});
 
   const close = () => {
+    let closed = false;
     try {
-      shopify?.navigation?.closeModal?.();
+      if (shopify?.navigation?.closeModal) {
+        shopify.navigation.closeModal();
+        closed = true;
+      }
     } catch (e) {
       console.error('closeModal failed', e);
     }
+
+    if (!closed) {
+      try {
+        shopify?.modal?.close?.();
+        closed = true;
+      } catch (e) {
+        console.error('modal.close failed', e);
+      }
+    }
+
+    if (!closed) {
+      console.warn('Modal close API not available in this environment');
+    }
+  };
+
+  const resetForm = () => {
+    setCustomerMode('search');
+    setCustomerSearch('');
+    setCustomers([]);
+    setSelectedCustomer(null);
+    setNewCustomer(createInitialNewCustomer());
+    setDeviceInfo(createInitialDeviceInfo());
+    setFinancialInfo(createInitialFinancialInfo());
+    setSelectedTechnicianId('');
+    setErrors({});
   };
 
 
@@ -224,13 +259,19 @@ function Modal() {
       console.log("Response data:", result);
 
       if (result.success) {
-        shopify?.toast?.show?.(`Ticket created successfully! ID: ${result.ticketId.slice(-8)}`);
-        
-        // TODO: Handle draft order payment flow
-        if (result.draftOrderId) {
-          shopify?.toast?.show?.('Draft order created for deposit payment');
+        const ticketSuffix = result.ticketId ? result.ticketId.slice(-8) : '';
+        const ticketMessage = ticketSuffix
+          ? `Repair ticket created successfully. Ticket ID ending ${ticketSuffix}.`
+          : 'Repair ticket created successfully.';
+        shopify?.toast?.show?.(ticketMessage);
+
+        if (result.intakeInvoiceUrl) {
+          shopify?.toast?.show?.('Deposit invoice created and sent to customer.');
+        } else if (result.draftOrderId) {
+          shopify?.toast?.show?.('Deposit draft order created for payment.');
         }
-        
+
+        resetForm();
         close();
       } else {
         shopify?.toast?.show?.(result.error || 'Failed to create ticket', { isError: true });
