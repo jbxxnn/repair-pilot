@@ -62,6 +62,7 @@ function Modal() {
   // Form state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [successInfo, setSuccessInfo] = useState(null);
 
   const close = async () => {
     try {
@@ -274,8 +275,12 @@ function Modal() {
 
         shopify?.toast?.show?.(toastParts.join(' '));
 
-        resetForm();
-        await close();
+        setSuccessInfo({
+          ticketId: result.ticketId,
+          ticketSuffix,
+          intakeInvoiceUrl: result.intakeInvoiceUrl,
+          draftOrderId: result.draftOrderId,
+        });
       } else {
         shopify?.toast?.show?.(result.error || 'Failed to create ticket', { isError: true });
       }
@@ -286,6 +291,53 @@ function Modal() {
       setIsSubmitting(false);
     }
   };
+
+  const handleCreateAnother = () => {
+    resetForm();
+    setSuccessInfo(null);
+  };
+
+  const handleCloseTile = async () => {
+    await close();
+  };
+
+  if (successInfo) {
+    return (
+      <s-screen heading="Repair Ticket Created">
+        <s-scroll-box padding="large">
+          <s-stack direction="block" gap="large">
+            <s-stack direction="block" gap="tight">
+              <s-text type="strong">Success!</s-text>
+              <s-text>
+                The repair ticket has been created successfully
+                {successInfo.ticketSuffix ? ` (ID ending ${successInfo.ticketSuffix})` : ''}.
+              </s-text>
+              {successInfo.intakeInvoiceUrl ? (
+                <s-text>
+                  The customer has been sent a payment link for the deposit. You can also view the
+                  invoice in Shopify Admin.
+                </s-text>
+              ) : successInfo.draftOrderId ? (
+                <s-text>
+                  A draft order for the deposit was created. You can complete the payment in Shopify
+                  Admin.
+                </s-text>
+              ) : null}
+            </s-stack>
+
+            <s-stack direction="block" gap="base">
+              <s-button variant="primary" onClick={handleCreateAnother}>
+                Create another ticket
+              </s-button>
+              <s-button variant="secondary" onClick={handleCloseTile}>
+                Close
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-scroll-box>
+      </s-screen>
+    );
+  }
 
   return (
     <s-screen heading="Create Repair Ticket">
