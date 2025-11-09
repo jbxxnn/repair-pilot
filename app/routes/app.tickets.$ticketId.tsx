@@ -747,6 +747,18 @@ export default function TicketDetail() {
     gap: "1rem",
     alignItems: "end",
     gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    width: "100%",
+  };
+
+  const baseInputStyle: CSSProperties = {
+    width: "100%",
+    padding: "0.625rem 0.75rem",
+    borderRadius: "8px",
+    border: "2px solid #38bdf8",
+    fontSize: "14px",
+    transition: "all 0.2s",
+    outline: "none",
+    boxSizing: "border-box",
   };
 
   return (
@@ -998,7 +1010,7 @@ export default function TicketDetail() {
                             onChange={(e) => { setPartForm({ ...partForm, name: e.target.value }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
                             placeholder="e.g., iPhone 12 LCD Screen" 
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1012,7 +1024,7 @@ export default function TicketDetail() {
                             onChange={(e) => { setPartForm({ ...partForm, sku: e.target.value }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
                             placeholder="Optional" 
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1026,7 +1038,7 @@ export default function TicketDetail() {
                             value={partForm.quantity} 
                             onChange={(e) => { setPartForm({ ...partForm, quantity: parseInt(e.target.value) || 1 }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1041,7 +1053,7 @@ export default function TicketDetail() {
                             value={partForm.cost} 
                             onChange={(e) => { setPartForm({ ...partForm, cost: parseFloat(e.target.value) || 0 }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1091,7 +1103,7 @@ export default function TicketDetail() {
                                     onChange={(e) => { setPartForm({ ...partForm, name: e.target.value }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
                                     placeholder="e.g., iPhone 12 LCD Screen" 
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={{ ...baseInputStyle, border: "2px solid #fbbf24" }}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />
@@ -1105,7 +1117,7 @@ export default function TicketDetail() {
                                     onChange={(e) => { setPartForm({ ...partForm, sku: e.target.value }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
                                     placeholder="Optional" 
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={{ ...baseInputStyle, border: "2px solid #fbbf24" }}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />
@@ -1119,7 +1131,7 @@ export default function TicketDetail() {
                                     value={partForm.quantity} 
                                     onChange={(e) => { setPartForm({ ...partForm, quantity: parseInt(e.target.value) || 1 }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={baseInputStyle}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />
@@ -1134,7 +1146,7 @@ export default function TicketDetail() {
                                     value={partForm.cost} 
                                     onChange={(e) => { setPartForm({ ...partForm, cost: parseFloat(e.target.value) || 0 }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={baseInputStyle}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />
