@@ -14,7 +14,14 @@ export interface UploadPhotosResponse {
 
 export const action = async ({ request }: ActionFunctionArgs): Promise<Response> => {
   try {
-    // Authenticate the request
+    // Log request headers for debugging multipart issues
+    const contentType = request.headers.get("content-type") || request.headers.get("Content-Type");
+    console.log("[PHOTO_UPLOAD] Content-Type header:", contentType);
+
+    // Clone request so we can read body without affecting authentication
+    const bodyClone = request.clone();
+
+    // Authenticate the request (uses original request)
     const { session } = await authenticate.admin(request);
     
     if (!session) {
@@ -24,9 +31,23 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
       });
     }
 
-    // Parse form data
-    const formData = await request.formData();
+    // Parse form data from cloned request
+    let formData: FormData;
+    try {
+      formData = await bodyClone.formData();
+    } catch (parseError) {
+      console.error("[PHOTO_UPLOAD] Failed to parse form data:", parseError);
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Failed to parse upload form data. Ensure you are sending multipart/form-data." 
+      }), { 
+        status: 400, 
+        headers: { "Content-Type": "application/json" } 
+      });
+    }
+
     const files = formData.getAll("files") as File[];
+    console.log(`[PHOTO_UPLOAD] Received ${files?.length || 0} total file(s)`);
 
     if (!files || files.length === 0) {
       return new Response(JSON.stringify({ 
@@ -40,6 +61,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
 
     // Filter out empty files
     const validFiles = files.filter(file => file.size > 0 && file.type.startsWith("image/"));
+    console.log(`[PHOTO_UPLOAD] ${validFiles.length} valid image file(s) after filtering`);
 
     if (validFiles.length === 0) {
       return new Response(JSON.stringify({ 
