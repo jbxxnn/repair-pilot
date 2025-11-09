@@ -65,28 +65,66 @@ function Modal() {
   const [successInfo, setSuccessInfo] = useState(null);
 
   const close = async () => {
+    let closed = false;
+
     try {
       if (shopify?.navigation?.closeModal) {
         console.log('Attempting shopify.navigation.closeModal');
         await shopify.navigation.closeModal();
-        return;
+        closed = true;
       }
 
-      if (shopify?.action?.dismissModal) {
+      if (!closed && shopify?.navigation?.dismissModal) {
+        console.log('Attempting shopify.navigation.dismissModal');
+        await shopify.navigation.dismissModal();
+        closed = true;
+      }
+
+      if (!closed && shopify?.action?.closeModal) {
+        console.log('Attempting shopify.action.closeModal');
+        await shopify.action.closeModal();
+        closed = true;
+      }
+
+      if (!closed && shopify?.action?.dismissModal) {
         console.log('Attempting shopify.action.dismissModal');
         await shopify.action.dismissModal();
-        return;
+        closed = true;
       }
 
-      if (shopify?.extension?.close) {
+      if (!closed && shopify?.actions?.Modal?.close) {
+        console.log('Attempting shopify.actions.Modal.close');
+        await shopify.actions.Modal.close();
+        closed = true;
+      }
+
+      if (!closed && shopify?.modal?.close) {
+        console.log('Attempting shopify.modal.close');
+        await shopify.modal.close();
+        closed = true;
+      }
+
+      if (!closed && shopify?.extension?.close) {
         console.log('Attempting shopify.extension.close');
         await shopify.extension.close();
-        return;
+        closed = true;
       }
 
-      console.warn('No modal close API available on shopify object.');
+      if (!closed && shopify?.extension?.modal?.close) {
+        console.log('Attempting shopify.extension.modal.close');
+        await shopify.extension.modal.close();
+        closed = true;
+      }
+
+      if (!closed) {
+        console.warn('No modal close API available on shopify object.');
+        shopify?.toast?.show?.('Unable to close modal automatically. Please close it manually.', {
+          isError: true,
+        });
+      }
     } catch (e) {
       console.error('closeModal failed', e);
+      shopify?.toast?.show?.('Failed to close modal. Please close it manually.', { isError: true });
     }
   };
 
