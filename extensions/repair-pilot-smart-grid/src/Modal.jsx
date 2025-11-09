@@ -335,10 +335,6 @@ function Modal() {
     setSuccessInfo(null);
   };
 
-  const handleCloseTile = async () => {
-    await close();
-  };
-
   if (successInfo) {
     return (
       <s-screen heading="Repair Ticket Created">
@@ -366,9 +362,6 @@ function Modal() {
             <s-stack direction="block" gap="base">
               <s-button variant="primary" onClick={handleCreateAnother}>
                 Create another ticket
-              </s-button>
-              <s-button variant="secondary" onClick={handleCloseTile}>
-                Close
               </s-button>
             </s-stack>
           </s-stack>
