@@ -1,4 +1,5 @@
 import type { ActionFunctionArgs } from "react-router";
+import { unstable_parseMultipartFormData as parseMultipartFormData, unstable_createMemoryUploadHandler as createMemoryUploadHandler } from "@remix-run/node";
 import { authenticate } from "../shopify.server";
 import { uploadPhotos } from "../services/shopify.server";
 
@@ -17,10 +18,14 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
     const contentType = request.headers.get("content-type") || request.headers.get("Content-Type");
     console.log("[PHOTO_UPLOAD] Content-Type header:", contentType);
 
-    // Parse form data from the incoming request first (consumes the body)
+    // Use Remix multipart parser to reliably handle edge runtime streams
+    const uploadHandler = createMemoryUploadHandler({
+      maxPartSize: 10 * 1024 * 1024, // 10 MB per file limit
+    });
+
     let formData: FormData;
     try {
-      formData = await request.formData();
+      formData = await parseMultipartFormData(request, uploadHandler);
     } catch (parseError) {
       console.error("[PHOTO_UPLOAD] Failed to parse form data:", parseError);
       return new Response(JSON.stringify({ 
@@ -35,8 +40,11 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
     const files = formData.getAll("files") as File[];
     console.log(`[PHOTO_UPLOAD] Received ${files?.length || 0} total file(s)`);
 
-    // Clone request for authentication AFTER reading the body
-    const authRequest = request.clone();
+    // Recreate request for authentication (body already consumed)
+    const authRequest = new Request(request.url, {
+      method: request.method,
+      headers: request.headers,
+    });
 
     const { session } = await authenticate.admin(authRequest);
     
