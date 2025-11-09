@@ -242,8 +242,14 @@ function Modal() {
     depositAmount,
   }) => {
     try {
-      if (!shopify?.pos?.cart?.addCustomSale) {
-        return { success: false, error: 'POS cart API is not available on this device.' };
+      const cartApi = shopify?.cart || shopify?.pos?.cart;
+
+      if (!cartApi?.addCustomSale) {
+        return {
+          success: false,
+          error:
+            'POS cart API is not available. Ensure this extension is running in the POS app (not Admin) and that the device is updated.',
+        };
       }
 
       const amountNumber = parseFloat(depositAmount);
@@ -255,15 +261,15 @@ function Modal() {
         ? `Repair Deposit - Ticket #${ticketSuffix}`
         : 'Repair Deposit';
 
-      await shopify.pos.cart.addCustomSale({
+      await cartApi.addCustomSale({
         title,
         price: amountNumber.toFixed(2),
         quantity: 1,
         taxable: false,
       });
 
-      if (shopify.pos.cart.addCartProperties) {
-        await shopify.pos.cart.addCartProperties({
+      if (cartApi.addCartProperties) {
+        await cartApi.addCartProperties({
           repairpilot_ticket_id: ticketId || '',
           repairpilot_payment_type: 'deposit',
         });
@@ -274,9 +280,20 @@ function Modal() {
       console.error('Failed to add deposit to POS cart:', error);
       return {
         success: false,
-        error: error instanceof Error ? error.message : 'Unknown error adding item to cart',
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error adding item to cart',
       };
     }
+  };
+
+  const formatDepositAmount = (amount) => {
+    const numeric = typeof amount === 'number' ? amount : parseFloat(amount || '0');
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return '0.00';
+    }
+    return numeric.toFixed(2);
   };
 
   
@@ -373,7 +390,11 @@ function Modal() {
         } else if (posCartStatus?.success) {
           toastParts.push('Deposit added to the POS cart. Proceed to checkout to collect payment.');
         } else if (posCartStatus) {
-          toastParts.push('Ticket created. Add the deposit manually to the POS cart.');
+          toastParts.push(
+            `Ticket created. Add the deposit manually to the POS cart${
+              posCartStatus.error ? ` (${posCartStatus.error}).` : '.'
+            }`,
+          );
         }
 
         shopify?.toast?.show?.(toastParts.join(' '));
@@ -422,8 +443,12 @@ function Modal() {
                   </s-text>
                 ) : (
                   <s-text tone="critical">
-                    We couldn't add the deposit to the POS cart automatically. Add a custom sale in
-                    the cart for ${successInfo.depositAmount?.toFixed?.(2) || financialInfo.depositAmount} and
+                    We couldn't add the deposit to the POS cart automatically
+                    {successInfo.posCartStatus?.error
+                      ? ` (${successInfo.posCartStatus.error}).`
+                      : '.'}{' '}
+                    Add a custom sale in the cart for $
+                    {formatDepositAmount(successInfo.depositAmount || financialInfo.depositAmount)} and
                     charge the customer.
                   </s-text>
                 )}
