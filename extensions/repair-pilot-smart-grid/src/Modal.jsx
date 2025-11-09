@@ -52,6 +52,9 @@ function Modal() {
   // Financial state
   const [financialInfo, setFinancialInfo] = useState(createInitialFinancialInfo);
 
+  // Payment handling
+  const [paymentMode, setPaymentMode] = useState('pos'); // 'pos' or 'invoice'
+
   // Technician state
   const [technicians, setTechnicians] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState('');
@@ -138,6 +141,7 @@ function Modal() {
     setFinancialInfo(createInitialFinancialInfo());
     setSelectedTechnicianId('');
     setErrors({});
+    setPaymentMode('pos');
   };
 
 
@@ -232,6 +236,50 @@ function Modal() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const addDepositToPosCart = async ({
+    ticketId,
+    ticketSuffix,
+    depositAmount,
+  }) => {
+    try {
+      if (!shopify?.pos?.cart?.addCustomSale) {
+        return { success: false, error: 'POS cart API is not available on this device.' };
+      }
+
+      const amountNumber = parseFloat(depositAmount);
+      if (!amountNumber || amountNumber <= 0) {
+        return { success: false, error: 'Invalid deposit amount for POS cart.' };
+      }
+
+      const title = ticketSuffix
+        ? `Repair Deposit - Ticket #${ticketSuffix}`
+        : 'Repair Deposit';
+
+      await shopify.pos.cart.addCustomSale({
+        title,
+        price: amountNumber.toFixed(2),
+        quantity: 1,
+        taxable: false,
+      });
+
+      if (shopify.pos.cart.addCartProperties) {
+        await shopify.pos.cart.addCartProperties({
+          repairpilot_ticket_id: ticketId || '',
+          repairpilot_payment_type: 'deposit',
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to add deposit to POS cart:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error adding item to cart',
+      };
+    }
+  };
+
+  
 
 
   const submit = async () => {
@@ -266,7 +314,9 @@ function Modal() {
         depositAmount: parseFloat(financialInfo.depositAmount),
 
         // Technician assignment
-        technicianId: selectedTechnicianId || undefined
+        technicianId: selectedTechnicianId || undefined,
+
+        paymentMode,
       };
 
       console.log("Ticket data:", ticketData);
@@ -303,12 +353,27 @@ function Modal() {
         const ticketMessage = ticketSuffix
           ? `Repair ticket created successfully. Ticket ID ending ${ticketSuffix}.`
           : 'Repair ticket created successfully.';
+        let posCartStatus = null;
+        if (paymentMode === 'pos') {
+          posCartStatus = await addDepositToPosCart({
+            ticketId: result.ticketId,
+            ticketSuffix,
+            depositAmount: result.depositAmount || financialInfo.depositAmount,
+          });
+        }
+
         const toastParts = [ticketMessage];
 
-        if (result.intakeInvoiceUrl) {
-          toastParts.push('Deposit invoice created and sent to customer.');
-        } else if (result.draftOrderId) {
-          toastParts.push('Deposit draft order created for payment.');
+        if (paymentMode === 'invoice') {
+          if (result.intakeInvoiceUrl) {
+            toastParts.push('Deposit invoice created and sent to customer.');
+          } else if (result.draftOrderId) {
+            toastParts.push('Deposit draft order created for payment.');
+          }
+        } else if (posCartStatus?.success) {
+          toastParts.push('Deposit added to the POS cart. Proceed to checkout to collect payment.');
+        } else if (posCartStatus) {
+          toastParts.push('Ticket created. Add the deposit manually to the POS cart.');
         }
 
         shopify?.toast?.show?.(toastParts.join(' '));
@@ -318,6 +383,9 @@ function Modal() {
           ticketSuffix,
           intakeInvoiceUrl: result.intakeInvoiceUrl,
           draftOrderId: result.draftOrderId,
+          paymentMode,
+          depositAmount: result.depositAmount || parseFloat(financialInfo.depositAmount),
+          posCartStatus,
         });
       } else {
         shopify?.toast?.show?.(result.error || 'Failed to create ticket', { isError: true });
@@ -336,6 +404,45 @@ function Modal() {
   };
 
   if (successInfo) {
+    if (successInfo.paymentMode === 'pos') {
+      return (
+        <s-screen heading="Repair Ticket Created">
+          <s-scroll-box padding="large">
+            <s-stack direction="block" gap="large">
+              <s-stack direction="block" gap="tight">
+                <s-text type="strong">Success!</s-text>
+                <s-text>
+                  The repair ticket has been created successfully
+                  {successInfo.ticketSuffix ? ` (ID ending ${successInfo.ticketSuffix})` : ''}.
+                </s-text>
+                {successInfo.posCartStatus?.success ? (
+                  <s-text>
+                    The deposit has been added to the POS cart. Review the cart and complete the
+                    payment using the POS checkout.
+                  </s-text>
+                ) : (
+                  <s-text tone="critical">
+                    We couldn't add the deposit to the POS cart automatically. Add a custom sale in
+                    the cart for ${successInfo.depositAmount?.toFixed?.(2) || financialInfo.depositAmount} and
+                    charge the customer.
+                  </s-text>
+                )}
+              </s-stack>
+
+              <s-stack direction="block" gap="base">
+                <s-button variant="primary" onClick={async () => { await close(); }}>
+                  Return to POS cart
+                </s-button>
+                <s-button variant="secondary" onClick={handleCreateAnother}>
+                  Create another ticket
+                </s-button>
+              </s-stack>
+            </s-stack>
+          </s-scroll-box>
+        </s-screen>
+      );
+    }
+
     return (
       <s-screen heading="Repair Ticket Created">
         <s-scroll-box padding="large">
@@ -579,19 +686,43 @@ function Modal() {
               />
             </s-stack>
             {financialInfo.quotedAmount && financialInfo.depositAmount && (
-              <s-box padding="base" borderWidth="base">
-                <s-stack direction="block" gap="tight">
-                  <s-text type="strong">Payment Summary</s-text>
-                  <s-stack direction="block" gap="none">
-                    <s-text type="small">Total Quote: ${parseFloat(financialInfo.quotedAmount || 0).toFixed(2)}</s-text>
-                    <s-text type="small">Deposit Paid: ${parseFloat(financialInfo.depositAmount || 0).toFixed(2)}</s-text>
-                    <s-text type="strong" tone="critical">
-                      Remaining Balance: ${(parseFloat(financialInfo.quotedAmount || 0) - parseFloat(financialInfo.depositAmount || 0)).toFixed(2)}
-                    </s-text>
-                  </s-stack>
+              <s-box background="highlight" padding="base" border="subdued" cornerRadius="medium">
+                <s-stack direction="block" gap="none">
+                  <s-text tone="subdued" type="small">
+                    Summary
+                  </s-text>
+                </s-stack>
+                <s-stack direction="block" gap="none">
+                  <s-text type="small">Total Quote: ${parseFloat(financialInfo.quotedAmount || 0).toFixed(2)}</s-text>
+                  <s-text type="small">Deposit Paid: ${parseFloat(financialInfo.depositAmount || 0).toFixed(2)}</s-text>
+                  <s-text type="strong" tone="critical">
+                    Remaining Balance: ${(parseFloat(financialInfo.quotedAmount || 0) - parseFloat(financialInfo.depositAmount || 0)).toFixed(2)}
+                  </s-text>
                 </s-stack>
               </s-box>
             )}
+
+            <s-stack direction="block" gap="tight">
+              <s-text type="strong">Payment Method</s-text>
+              <s-stack direction="inline" gap="tight">
+                <s-button
+                  variant={paymentMode === 'pos' ? 'primary' : 'secondary'}
+                  onClick={() => setPaymentMode('pos')}
+                >
+                  Collect in POS
+                </s-button>
+                <s-button
+                  variant={paymentMode === 'invoice' ? 'primary' : 'secondary'}
+                  onClick={() => setPaymentMode('invoice')}
+                >
+                  Send Invoice
+                </s-button>
+              </s-stack>
+              <s-text tone="subdued" type="small">
+                Collect in POS adds the deposit to the current cart so you can charge the customer right
+                away. Send Invoice emails a draft order for later payment.
+              </s-text>
+            </s-stack>
           </s-stack>
         </s-section>
 
