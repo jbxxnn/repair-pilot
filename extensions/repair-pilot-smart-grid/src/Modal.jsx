@@ -63,38 +63,17 @@ function Modal() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const close = () => {
-    let closed = false;
-
-    try {
-      if (shopify?.action?.closeModal) {
-        shopify.action.closeModal();
-        closed = true;
-      }
-    } catch (e) {
-      console.error('action.closeModal failed', e);
-    }
-
+  const close = async () => {
     try {
       if (shopify?.navigation?.closeModal) {
-        shopify.navigation.closeModal();
-        closed = true;
+        await shopify.navigation.closeModal();
+        return;
+      }
+      if (shopify?.extension?.close) {
+        await shopify.extension.close();
       }
     } catch (e) {
       console.error('closeModal failed', e);
-    }
-
-    if (!closed) {
-      try {
-        shopify?.modal?.close?.();
-        closed = true;
-      } catch (e) {
-        console.error('modal.close failed', e);
-      }
-    }
-
-    if (!closed) {
-      console.warn('Modal close API not available in this environment');
     }
   };
 
@@ -284,7 +263,7 @@ function Modal() {
         shopify?.toast?.show?.(toastParts.join(' '));
 
         resetForm();
-        close();
+        await close();
       } else {
         shopify?.toast?.show?.(result.error || 'Failed to create ticket', { isError: true });
       }
