@@ -71,7 +71,13 @@ function Modal() {
     let closed = false;
 
     try {
-      if (shopify?.navigation?.closeModal) {
+      if (!closed && shopify?.pos?.close) {
+        console.log('Attempting shopify.pos.close');
+        await shopify.pos.close();
+        closed = true;
+      }
+
+      if (!closed && shopify?.navigation?.closeModal) {
         console.log('Attempting shopify.navigation.closeModal');
         await shopify.navigation.closeModal();
         closed = true;
@@ -128,6 +134,32 @@ function Modal() {
     } catch (e) {
       console.error('closeModal failed', e);
       shopify?.toast?.show?.('Failed to close modal. Please close it manually.', { isError: true });
+    }
+  };
+
+  const returnToPosCart = async () => {
+    try {
+      await close();
+    } catch (error) {
+      console.error('Failed to close modal before returning to POS cart:', error);
+    }
+
+    try {
+      const cartApi = shopify?.pos?.cart || shopify?.cart;
+      if (cartApi?.returnToCart) {
+        console.log('Attempting cart.returnToCart');
+        await cartApi.returnToCart();
+      } else {
+        console.warn('cart.returnToCart is unavailable on this device.');
+        shopify?.toast?.show?.('POS cart navigation is unavailable on this device.', {
+          isError: true,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to return to POS cart:', error);
+      shopify?.toast?.show?.('Unable to return to the POS cart automatically. Please close the modal manually.', {
+        isError: true,
+      });
     }
   };
 
@@ -455,7 +487,7 @@ function Modal() {
               </s-stack>
 
               <s-stack direction="block" gap="base">
-                <s-button variant="primary" onClick={async () => { await close(); }}>
+                <s-button variant="primary" onClick={returnToPosCart}>
                   Return to POS cart
                 </s-button>
                 <s-button variant="secondary" onClick={handleCreateAnother}>
