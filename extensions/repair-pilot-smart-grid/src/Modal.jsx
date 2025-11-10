@@ -137,6 +137,23 @@ function Modal() {
     }
   };
 
+  const isCartNavigationSupported = async () => {
+    try {
+      if (shopify?.pos?.device) {
+        const deviceInfo = await shopify.pos.device();
+        console.log('POS device info:', deviceInfo);
+        if (deviceInfo?.type && deviceInfo.type.toLowerCase() !== 'tablet') {
+          return false;
+        }
+      }
+    } catch (error) {
+      console.warn('Failed to inspect POS device type:', error);
+    }
+
+    const cartApi = shopify?.pos?.cart || shopify?.cart;
+    return Boolean(cartApi?.returnToCart);
+  };
+
   const returnToPosCart = async () => {
     try {
       await close();
@@ -144,17 +161,20 @@ function Modal() {
       console.error('Failed to close modal before returning to POS cart:', error);
     }
 
+    const canNavigate = await isCartNavigationSupported();
+
+    if (!canNavigate) {
+      console.warn('POS cart navigation is unavailable on this device.');
+      shopify?.toast?.show?.('Please exit the modal to resume checkout. POS cart navigation is unavailable on this device.', {
+        isError: false,
+      });
+      return;
+    }
+
     try {
       const cartApi = shopify?.pos?.cart || shopify?.cart;
-      if (cartApi?.returnToCart) {
-        console.log('Attempting cart.returnToCart');
-        await cartApi.returnToCart();
-      } else {
-        console.warn('cart.returnToCart is unavailable on this device.');
-        shopify?.toast?.show?.('POS cart navigation is unavailable on this device.', {
-          isError: true,
-        });
-      }
+      console.log('Attempting cart.returnToCart');
+      await cartApi.returnToCart();
     } catch (error) {
       console.error('Failed to return to POS cart:', error);
       shopify?.toast?.show?.('Unable to return to the POS cart automatically. Please close the modal manually.', {
