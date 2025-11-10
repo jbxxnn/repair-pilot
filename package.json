@@ -19,7 +19,7 @@
     "graphql-codegen": "graphql-codegen",
     "vite": "vite",
     "typecheck": "react-router typegen && tsc --noEmit",
-    "migrate:deploy": "psql $DATABASE_URL -f migrations/001_init.sql && psql $DATABASE_URL -f migrations/002_indexes.sql",
+    "migrate:deploy": "psql $DATABASE_URL -f migrations/001_init.sql && psql $DATABASE_URL -f migrations/002_indexes.sql && psql $DATABASE_URL -f migrations/003_ticket_deposit_columns.sql",
     "migrate:reset": "prisma migrate reset --force",
     "db:generate": "prisma generate",
     "db:push": "prisma db push",

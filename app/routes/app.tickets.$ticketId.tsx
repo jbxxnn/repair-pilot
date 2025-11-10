@@ -70,6 +70,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     remainingAmount: ticket.remainingAmount.toNumber(),
     intakeOrderId: ticket.intakeOrderId,
     finalOrderId: ticket.finalOrderId,
+    depositPaymentOrderId: ticket.depositPaymentOrderId,
+    depositPaymentOrderName: ticket.depositPaymentOrderName,
+    depositPaymentMethod: ticket.depositPaymentMethod,
+    depositCollectedAt: ticket.depositCollectedAt,
+    depositCollectedAmount: ticket.depositCollectedAmount ? ticket.depositCollectedAmount.toNumber() : null,
     technicianId: ticket.technicianId,
     technician,
     createdAt: ticket.createdAt,
@@ -980,8 +985,30 @@ export default function TicketDetail() {
               <div style={{ padding: "1rem", background: "#f0fdf4", borderRadius: "8px", border: "1px solid #86efac" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Quoted Amount</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#059669", marginTop: "0.5rem" }}>{currentTicket.quotedAmount ? formatCurrency(currentTicket.quotedAmount) : "N/A"}</div></div>
               <div style={{ padding: "1rem", background: "#ecfdf5", borderRadius: "8px", border: "1px solid #6ee7b7" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Deposit</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#059669", marginTop: "0.5rem" }}>{formatCurrency(currentTicket.depositAmount)}</div></div>
               {currentTicket.remainingAmount > 0 && <div style={{ padding: "1rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fca5a5" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Remaining</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#dc2626", marginTop: "0.5rem" }}>{formatCurrency(currentTicket.remainingAmount)}</div></div>}
-            </div>
-          </section>
+            {currentTicket.depositCollectedAt ? (
+              <div style={{ gridColumn: "1 / -1", padding: "1rem", background: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
+                <label style={{ fontSize: "12px", color: "#1d4ed8", fontWeight: "600" }}>Deposit Collected</label>
+                <div style={{ marginTop: "0.5rem", color: "#1e3a8a", fontWeight: 600, fontSize: "16px" }}>
+                  {formatCurrency(currentTicket.depositCollectedAmount ?? currentTicket.depositAmount)}
+                </div>
+                <div style={{ marginTop: "0.25rem", fontSize: "13px", color: "#1e40af" }}>
+                  Collected via {currentTicket.depositPaymentMethod || "POS"}
+                  {currentTicket.depositPaymentOrderName ? ` · Order ${currentTicket.depositPaymentOrderName}` : ""}
+                </div>
+                <div style={{ marginTop: "0.25rem", fontSize: "12px", color: "#1d4ed8" }}>
+                  {"on " + new Date(currentTicket.depositCollectedAt).toLocaleString()}
+                </div>
+              </div>
+            ) : (
+              <div style={{ gridColumn: "1 / -1", padding: "1rem", background: "#fefce8", borderRadius: "8px", border: "1px solid #fcd34d" }}>
+                <label style={{ fontSize: "12px", color: "#92400e", fontWeight: "600" }}>Deposit Outstanding</label>
+                <div style={{ marginTop: "0.5rem", fontSize: "13px", color: "#78350f" }}>
+                  Waiting for POS payment. If you collected payment outside POS, you can manually mark it as received.
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
           <section style={{ marginBottom: "2rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
