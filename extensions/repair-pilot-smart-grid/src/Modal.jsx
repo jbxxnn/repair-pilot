@@ -863,10 +863,11 @@ function Modal() {
               </s-box>
             ) : (
               <s-stack direction="block" gap="tight">
-                <s-select
-                  label="Device Type"
+                <s-text type="strong">Device Type</s-text>
+                <s-choice-list
                   value={selectedDeviceTypeId}
-                  onChange={(value) => {
+                  onChange={(e) => {
+                    const value = e.currentTarget.value;
                     setSelectedDeviceTypeId(value);
                     const selectedType = deviceTypes.find(dt => dt.id === value);
                     if (selectedType?.name === 'Other') {
@@ -876,15 +877,17 @@ function Modal() {
                       setDeviceInfo({...deviceInfo, type: selectedType?.name || ''});
                     }
                   }}
-                  options={[
-                    { value: '', label: 'Select Device Type' },
-                    ...deviceTypes.map(dt => ({
-                      value: dt.id,
-                      label: dt.name
-                    }))
-                  ]}
-                  error={errors.deviceType}
-                />
+                >
+                  <s-choice value="" id="device-type-empty">Select Device Type</s-choice>
+                  {deviceTypes.map(dt => (
+                    <s-choice key={dt.id} value={dt.id} id={`device-type-${dt.id}`}>
+                      {dt.name}
+                    </s-choice>
+                  ))}
+                </s-choice-list>
+                {errors.deviceType && (
+                  <s-text tone="critical">{errors.deviceType}</s-text>
+                )}
                 {selectedDeviceTypeId && deviceTypes.find(dt => dt.id === selectedDeviceTypeId)?.name === 'Other' && (
                   <s-text-field
                     label="Device Type (Other)"
@@ -911,10 +914,11 @@ function Modal() {
               </s-box>
             ) : (
               <s-stack direction="block" gap="tight">
-                <s-select
-                  label="Brand"
+                <s-text type="strong">Brand</s-text>
+                <s-choice-list
                   value={selectedBrandId}
-                  onChange={(value) => {
+                  onChange={(e) => {
+                    const value = e.currentTarget.value;
                     setSelectedBrandId(value);
                     const selectedBrand = brands.find(b => b.id === value);
                     if (selectedBrand?.name === 'Other') {
@@ -928,15 +932,17 @@ function Modal() {
                     setModelOther('');
                     setModels([]);
                   }}
-                  options={[
-                    { value: '', label: 'Select Brand' },
-                    ...brands.map(b => ({
-                      value: b.id,
-                      label: b.name
-                    }))
-                  ]}
-                  error={errors.deviceBrand}
-                />
+                >
+                  <s-choice value="" id="brand-empty">Select Brand</s-choice>
+                  {brands.map(b => (
+                    <s-choice key={b.id} value={b.id} id={`brand-${b.id}`}>
+                      {b.name}
+                    </s-choice>
+                  ))}
+                </s-choice-list>
+                {errors.deviceBrand && (
+                  <s-text tone="critical">{errors.deviceBrand}</s-text>
+                )}
                 {selectedBrandId && brands.find(b => b.id === selectedBrandId)?.name === 'Other' && (
                   <s-text-field
                     label="Brand (Other)"
@@ -963,10 +969,11 @@ function Modal() {
               </s-box>
             ) : (
               <s-stack direction="block" gap="tight">
-                <s-select
-                  label="Model"
+                <s-text type="strong">Model</s-text>
+                <s-choice-list
                   value={selectedModelId}
-                  onChange={(value) => {
+                  onChange={(e) => {
+                    const value = e.currentTarget.value;
                     setSelectedModelId(value);
                     const selectedModel = models.find(m => m.id === value);
                     if (selectedModel?.name === 'Other') {
@@ -976,16 +983,18 @@ function Modal() {
                       setDeviceInfo({...deviceInfo, model: selectedModel?.name || ''});
                     }
                   }}
-                  options={[
-                    { value: '', label: 'Select Model' },
-                    ...models.map(m => ({
-                      value: m.id,
-                      label: m.name
-                    })),
-                    { value: 'other', label: 'Other' }
-                  ]}
-                  error={errors.deviceModel}
-                />
+                >
+                  <s-choice value="" id="model-empty">Select Model</s-choice>
+                  {models.map(m => (
+                    <s-choice key={m.id} value={m.id} id={`model-${m.id}`}>
+                      {m.name}
+                    </s-choice>
+                  ))}
+                  <s-choice value="other" id="model-other">Other</s-choice>
+                </s-choice-list>
+                {errors.deviceModel && (
+                  <s-text tone="critical">{errors.deviceModel}</s-text>
+                )}
                 {selectedModelId === 'other' && (
                   <s-text-field
                     label="Model (Other)"
@@ -1100,18 +1109,20 @@ function Modal() {
                 </s-text>
               </s-box>
             ) : (
-              <s-select
-                label="Assign Technician"
-                value={selectedTechnicianId}
-                onChange={(value) => setSelectedTechnicianId(value)}
-                options={[
-                  { value: '', label: 'Unassigned' },
-                  ...technicians.map(tech => ({
-                    value: tech.id,
-                    label: tech.name
-                  }))
-                ]}
-              />
+              <s-stack direction="block" gap="tight">
+                <s-text type="strong">Assign Technician</s-text>
+                <s-choice-list
+                  value={selectedTechnicianId}
+                  onChange={(e) => setSelectedTechnicianId(e.currentTarget.value)}
+                >
+                  <s-choice value="" id="tech-empty">Unassigned</s-choice>
+                  {technicians.map(tech => (
+                    <s-choice key={tech.id} value={tech.id} id={`tech-${tech.id}`}>
+                      {tech.name}
+                    </s-choice>
+                  ))}
+                </s-choice-list>
+              </s-stack>
             )}
           </s-stack>
         </s-section>
