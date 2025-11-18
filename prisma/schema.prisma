@@ -95,3 +95,38 @@ model Session {
   @@index([expires], map: "idx_session_expires")
   @@index([shop], map: "idx_session_shop")
 }
+
+model DeviceType {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique
+  displayOrder Int    @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("device_types")
+}
+
+model Brand {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique
+  displayOrder Int    @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  models    Model[]
+
+  @@map("brands")
+}
+
+model Model {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  brandId   String   @map("brand_id") @db.Uuid
+  name      String
+  displayOrder Int    @default(0)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  brand     Brand    @relation(fields: [brandId], references: [id], onDelete: Cascade)
+
+  @@unique([brandId, name])
+  @@index([brandId], map: "idx_models_brand")
+  @@map("models")
+}

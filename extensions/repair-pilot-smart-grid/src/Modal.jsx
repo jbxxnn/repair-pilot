@@ -48,6 +48,20 @@ function Modal() {
 
   // Device state
   const [deviceInfo, setDeviceInfo] = useState(createInitialDeviceInfo);
+  
+  // Device lookup state
+  const [deviceTypes, setDeviceTypes] = useState([]);
+  const [brands, setBrands] = useState([]);
+  const [models, setModels] = useState([]);
+  const [selectedDeviceTypeId, setSelectedDeviceTypeId] = useState('');
+  const [selectedBrandId, setSelectedBrandId] = useState('');
+  const [selectedModelId, setSelectedModelId] = useState('');
+  const [deviceTypeOther, setDeviceTypeOther] = useState('');
+  const [brandOther, setBrandOther] = useState('');
+  const [modelOther, setModelOther] = useState('');
+  const [loadingDeviceTypes, setLoadingDeviceTypes] = useState(true);
+  const [loadingBrands, setLoadingBrands] = useState(true);
+  const [loadingModels, setLoadingModels] = useState(false);
 
   // Financial state
   const [financialInfo, setFinancialInfo] = useState(createInitialFinancialInfo);
@@ -107,6 +121,13 @@ function Modal() {
     setDeviceInfo(createInitialDeviceInfo());
     setFinancialInfo(createInitialFinancialInfo());
     setSelectedTechnicianId('');
+    setSelectedDeviceTypeId('');
+    setSelectedBrandId('');
+    setSelectedModelId('');
+    setDeviceTypeOther('');
+    setBrandOther('');
+    setModelOther('');
+    setModels([]);
     setErrors({});
   };
 
@@ -142,6 +163,96 @@ function Modal() {
 
     fetchTechnicians();
   }, []);
+
+  // Fetch device types on mount
+  useEffect(() => {
+    const fetchDeviceTypes = async () => {
+      setLoadingDeviceTypes(true);
+      try {
+        const response = await fetch(`${APP_URL}/api/device-types`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setDeviceTypes(data.deviceTypes || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load device types:', error);
+        shopify?.toast?.show?.('Failed to load device types', { isError: true });
+      } finally {
+        setLoadingDeviceTypes(false);
+      }
+    };
+
+    fetchDeviceTypes();
+  }, []);
+
+  // Fetch brands on mount
+  useEffect(() => {
+    const fetchBrands = async () => {
+      setLoadingBrands(true);
+      try {
+        const response = await fetch(`${APP_URL}/api/brands`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setBrands(data.brands || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load brands:', error);
+        shopify?.toast?.show?.('Failed to load brands', { isError: true });
+      } finally {
+        setLoadingBrands(false);
+      }
+    };
+
+    fetchBrands();
+  }, []);
+
+  // Fetch models when brand is selected
+  useEffect(() => {
+    if (!selectedBrandId) {
+      setModels([]);
+      setSelectedModelId('');
+      return;
+    }
+
+    const fetchModels = async () => {
+      setLoadingModels(true);
+      try {
+        const response = await fetch(`${APP_URL}/api/models?brandId=${selectedBrandId}`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setModels(data.models || []);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load models:', error);
+        shopify?.toast?.show?.('Failed to load models', { isError: true });
+      } finally {
+        setLoadingModels(false);
+      }
+    };
+
+    fetchModels();
+  }, [selectedBrandId]);
 
   // Customer search with debouncing
   useEffect(() => {
@@ -189,9 +300,27 @@ function Modal() {
     }
 
     // Device validation
-    if (!deviceInfo.type.trim()) newErrors.deviceType = 'Device type is required';
-    if (!deviceInfo.brand.trim()) newErrors.deviceBrand = 'Brand is required';
-    if (!deviceInfo.model.trim()) newErrors.deviceModel = 'Model is required';
+    const selectedDeviceType = deviceTypes.find(dt => dt.id === selectedDeviceTypeId);
+    if (!selectedDeviceTypeId) {
+      newErrors.deviceType = 'Device type is required';
+    } else if (selectedDeviceType?.name === 'Other' && !deviceTypeOther.trim()) {
+      newErrors.deviceType = 'Please enter device type';
+    }
+    
+    const selectedBrand = brands.find(b => b.id === selectedBrandId);
+    if (!selectedBrandId) {
+      newErrors.deviceBrand = 'Brand is required';
+    } else if (selectedBrand?.name === 'Other' && !brandOther.trim()) {
+      newErrors.deviceBrand = 'Please enter brand name';
+    }
+    
+    if (!selectedBrandId) {
+      newErrors.deviceModel = 'Please select a brand first';
+    } else if (!selectedModelId) {
+      newErrors.deviceModel = 'Model is required';
+    } else if (selectedModelId === 'other' && !modelOther.trim()) {
+      newErrors.deviceModel = 'Please enter model name';
+    }
 
     // Financial validation
     if (!financialInfo.depositAmount || parseFloat(financialInfo.depositAmount) <= 0) {
@@ -224,10 +353,16 @@ function Modal() {
         createNewCustomer: customerMode === 'create' ? newCustomer : undefined,
         customerSearch: customerMode === 'search' && !selectedCustomer ? customerSearch : undefined,
 
-        // Device data
-        deviceType: deviceInfo.type,
-        deviceBrand: deviceInfo.brand,
-        deviceModel: deviceInfo.model,
+        // Device data - use selected dropdown values or "Other" text values
+        deviceType: selectedDeviceTypeId && deviceTypes.find(dt => dt.id === selectedDeviceTypeId)?.name !== 'Other'
+          ? deviceTypes.find(dt => dt.id === selectedDeviceTypeId)?.name
+          : deviceTypeOther.trim() || deviceInfo.type,
+        deviceBrand: selectedBrandId && brands.find(b => b.id === selectedBrandId)?.name !== 'Other'
+          ? brands.find(b => b.id === selectedBrandId)?.name
+          : brandOther.trim() || deviceInfo.brand,
+        deviceModel: selectedModelId && selectedModelId !== 'other'
+          ? models.find(m => m.id === selectedModelId)?.name
+          : modelOther.trim() || deviceInfo.model,
         serial: deviceInfo.serial,
         issueDescription: deviceInfo.issueDescription,
 
@@ -439,27 +574,147 @@ function Modal() {
         {/* Device Section */}
         <s-section heading="Device Information">
           <s-stack direction="block" gap="base">
-            <s-text-field
-              label="Device Type"
-              value={deviceInfo.type}
-              onInput={(e) => setDeviceInfo({...deviceInfo, type: e.target.value})}
-              placeholder="Phone, Tablet, Laptop"
-              error={errors.deviceType}
-            />
-            <s-text-field
-              label="Brand"
-              value={deviceInfo.brand}
-              onInput={(e) => setDeviceInfo({...deviceInfo, brand: e.target.value})}
-              placeholder="Apple, Samsung, Dell"
-              error={errors.deviceBrand}
-            />
-            <s-text-field
-              label="Model"
-              value={deviceInfo.model}
-              onInput={(e) => setDeviceInfo({...deviceInfo, model: e.target.value})}
-              placeholder="iPhone 14, Galaxy S23"
-              error={errors.deviceModel}
-            />
+            {/* Device Type Dropdown */}
+            {loadingDeviceTypes ? (
+              <s-box padding="base">
+                <s-text tone="subdued">Loading device types...</s-text>
+              </s-box>
+            ) : (
+              <s-stack direction="block" gap="tight">
+                <s-select
+                  label="Device Type"
+                  value={selectedDeviceTypeId}
+                  onChange={(value) => {
+                    setSelectedDeviceTypeId(value);
+                    const selectedType = deviceTypes.find(dt => dt.id === value);
+                    if (selectedType?.name === 'Other') {
+                      setDeviceTypeOther('');
+                    } else {
+                      setDeviceTypeOther('');
+                      setDeviceInfo({...deviceInfo, type: selectedType?.name || ''});
+                    }
+                  }}
+                  options={[
+                    { value: '', label: 'Select Device Type' },
+                    ...deviceTypes.map(dt => ({
+                      value: dt.id,
+                      label: dt.name
+                    }))
+                  ]}
+                  error={errors.deviceType}
+                />
+                {selectedDeviceTypeId && deviceTypes.find(dt => dt.id === selectedDeviceTypeId)?.name === 'Other' && (
+                  <s-text-field
+                    label="Device Type (Other)"
+                    value={deviceTypeOther}
+                    onInput={(e) => {
+                      setDeviceTypeOther(e.target.value);
+                      setDeviceInfo({...deviceInfo, type: e.target.value});
+                    }}
+                    placeholder="Enter device type"
+                    error={errors.deviceType}
+                  />
+                )}
+              </s-stack>
+            )}
+
+            {/* Brand Dropdown */}
+            {loadingBrands ? (
+              <s-box padding="base">
+                <s-text tone="subdued">Loading brands...</s-text>
+              </s-box>
+            ) : (
+              <s-stack direction="block" gap="tight">
+                <s-select
+                  label="Brand"
+                  value={selectedBrandId}
+                  onChange={(value) => {
+                    setSelectedBrandId(value);
+                    const selectedBrand = brands.find(b => b.id === value);
+                    if (selectedBrand?.name === 'Other') {
+                      setBrandOther('');
+                    } else {
+                      setBrandOther('');
+                      setDeviceInfo({...deviceInfo, brand: selectedBrand?.name || ''});
+                    }
+                    // Reset model when brand changes
+                    setSelectedModelId('');
+                    setModelOther('');
+                    setModels([]);
+                  }}
+                  options={[
+                    { value: '', label: 'Select Brand' },
+                    ...brands.map(b => ({
+                      value: b.id,
+                      label: b.name
+                    }))
+                  ]}
+                  error={errors.deviceBrand}
+                />
+                {selectedBrandId && brands.find(b => b.id === selectedBrandId)?.name === 'Other' && (
+                  <s-text-field
+                    label="Brand (Other)"
+                    value={brandOther}
+                    onInput={(e) => {
+                      setBrandOther(e.target.value);
+                      setDeviceInfo({...deviceInfo, brand: e.target.value});
+                    }}
+                    placeholder="Enter brand name"
+                    error={errors.deviceBrand}
+                  />
+                )}
+              </s-stack>
+            )}
+
+            {/* Model Dropdown */}
+            {!selectedBrandId ? (
+              <s-box padding="base">
+                <s-text tone="subdued">Please select a brand first</s-text>
+              </s-box>
+            ) : loadingModels ? (
+              <s-box padding="base">
+                <s-text tone="subdued">Loading models...</s-text>
+              </s-box>
+            ) : (
+              <s-stack direction="block" gap="tight">
+                <s-select
+                  label="Model"
+                  value={selectedModelId}
+                  onChange={(value) => {
+                    setSelectedModelId(value);
+                    const selectedModel = models.find(m => m.id === value);
+                    if (selectedModel?.name === 'Other') {
+                      setModelOther('');
+                    } else {
+                      setModelOther('');
+                      setDeviceInfo({...deviceInfo, model: selectedModel?.name || ''});
+                    }
+                  }}
+                  options={[
+                    { value: '', label: 'Select Model' },
+                    ...models.map(m => ({
+                      value: m.id,
+                      label: m.name
+                    })),
+                    { value: 'other', label: 'Other' }
+                  ]}
+                  error={errors.deviceModel}
+                />
+                {selectedModelId === 'other' && (
+                  <s-text-field
+                    label="Model (Other)"
+                    value={modelOther}
+                    onInput={(e) => {
+                      setModelOther(e.target.value);
+                      setDeviceInfo({...deviceInfo, model: e.target.value});
+                    }}
+                    placeholder="Enter model name"
+                    error={errors.deviceModel}
+                  />
+                )}
+              </s-stack>
+            )}
+
             <s-text-field
               label="Serial Number"
               value={deviceInfo.serial}
