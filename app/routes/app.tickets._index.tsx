@@ -1,5 +1,6 @@
 ﻿import { useState, useEffect, useCallback } from "react";
 import type { LoaderFunctionArgs } from "react-router";
+import { useRouteError } from "react-router";
 import { useNavigate } from "react-router";
 import { useAppBridge } from "@shopify/app-bridge-react";
 import { authenticate } from "../shopify.server";
@@ -189,6 +190,34 @@ export default function TicketsBoard() {
           <TicketColumn status={statusFilter as TicketStatus} tickets={tickets} onUpdate={loadTickets} onTicketClick={(ticket) => navigate(`/app/tickets/${ticket.id}`)} />
         )}
       </div>
+    </s-page>
+  );
+}
+
+export function ErrorBoundary() {
+  const error = useRouteError();
+  console.error("Ticket Board ErrorBoundary:", error);
+
+  let message = "Unknown error";
+  if (error instanceof Error) {
+    message = error.message;
+  } else if (typeof error === "string") {
+    message = error;
+  } else if (error && typeof error === "object") {
+    try {
+      message = JSON.stringify(error);
+    } catch (err) {
+      message = String(error);
+    }
+  }
+
+  return (
+    <s-page heading="Ticket Board">
+      <s-box padding="base" borderWidth="base" background="critical" borderRadius="base">
+        <s-text type="strong">Ticket board failed to load</s-text>
+        <s-text>{message}</s-text>
+        <s-text tone="subdued">Please capture this message and share it so we can investigate.</s-text>
+      </s-box>
     </s-page>
   );
 }

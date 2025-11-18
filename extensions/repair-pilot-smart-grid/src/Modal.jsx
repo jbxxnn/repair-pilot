@@ -66,6 +66,9 @@ function Modal() {
   // Financial state
   const [financialInfo, setFinancialInfo] = useState(createInitialFinancialInfo);
 
+  // Payment handling
+  const [paymentMode, setPaymentMode] = useState('pos'); // 'pos' or 'invoice'
+
   // Technician state
   const [technicians, setTechnicians] = useState([]);
   const [selectedTechnicianId, setSelectedTechnicianId] = useState('');
@@ -76,39 +79,121 @@ function Modal() {
   // Form state
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
+  const [successInfo, setSuccessInfo] = useState(null);
 
-  const close = () => {
+  const close = async () => {
     let closed = false;
 
     try {
-      if (shopify?.action?.closeModal) {
-        shopify.action.closeModal();
+      if (!closed && shopify?.pos?.close) {
+        console.log('Attempting shopify.pos.close');
+        await shopify.pos.close();
         closed = true;
       }
-    } catch (e) {
-      console.error('action.closeModal failed', e);
-    }
 
-    try {
-      if (shopify?.navigation?.closeModal) {
-        shopify.navigation.closeModal();
+      if (!closed && shopify?.navigation?.closeModal) {
+        console.log('Attempting shopify.navigation.closeModal');
+        await shopify.navigation.closeModal();
         closed = true;
+      }
+
+      if (!closed && shopify?.navigation?.dismissModal) {
+        console.log('Attempting shopify.navigation.dismissModal');
+        await shopify.navigation.dismissModal();
+        closed = true;
+      }
+
+      if (!closed && shopify?.action?.closeModal) {
+        console.log('Attempting shopify.action.closeModal');
+        await shopify.action.closeModal();
+        closed = true;
+      }
+
+      if (!closed && shopify?.action?.dismissModal) {
+        console.log('Attempting shopify.action.dismissModal');
+        await shopify.action.dismissModal();
+        closed = true;
+      }
+
+      if (!closed && shopify?.actions?.Modal?.close) {
+        console.log('Attempting shopify.actions.Modal.close');
+        await shopify.actions.Modal.close();
+        closed = true;
+      }
+
+      if (!closed && shopify?.modal?.close) {
+        console.log('Attempting shopify.modal.close');
+        await shopify.modal.close();
+        closed = true;
+      }
+
+      if (!closed && shopify?.extension?.close) {
+        console.log('Attempting shopify.extension.close');
+        await shopify.extension.close();
+        closed = true;
+      }
+
+      if (!closed && shopify?.extension?.modal?.close) {
+        console.log('Attempting shopify.extension.modal.close');
+        await shopify.extension.modal.close();
+        closed = true;
+      }
+
+      if (!closed) {
+        console.warn('No modal close API available on shopify object.');
+        shopify?.toast?.show?.('Unable to close modal automatically. Please close it manually.', {
+          isError: true,
+        });
       }
     } catch (e) {
       console.error('closeModal failed', e);
+      shopify?.toast?.show?.('Failed to close modal. Please close it manually.', { isError: true });
     }
+  };
 
-    if (!closed) {
-      try {
-        shopify?.modal?.close?.();
-        closed = true;
-      } catch (e) {
-        console.error('modal.close failed', e);
+  const isCartNavigationSupported = async () => {
+    try {
+      if (shopify?.pos?.device) {
+        const deviceInfo = await shopify.pos.device();
+        console.log('POS device info:', deviceInfo);
+        if (deviceInfo?.type && deviceInfo.type.toLowerCase() !== 'tablet') {
+          return false;
+        }
       }
+    } catch (error) {
+      console.warn('Failed to inspect POS device type:', error);
     }
 
-    if (!closed) {
-      console.warn('Modal close API not available in this environment');
+    const cartApi = shopify?.pos?.cart || shopify?.cart;
+    return Boolean(cartApi?.returnToCart);
+  };
+
+  const returnToPosCart = async () => {
+    try {
+      await close();
+    } catch (error) {
+      console.error('Failed to close modal before returning to POS cart:', error);
+    }
+
+    const canNavigate = await isCartNavigationSupported();
+
+    if (!canNavigate) {
+      console.warn('POS cart navigation is unavailable on this device.');
+      shopify?.toast?.show?.('Please exit the modal to resume checkout. POS cart navigation is unavailable on this device.', {
+        isError: false,
+      });
+      return;
+    }
+
+    try {
+      const cartApi = shopify?.pos?.cart || shopify?.cart;
+      console.log('Attempting cart.returnToCart');
+      await cartApi.returnToCart();
+    } catch (error) {
+      console.error('Failed to return to POS cart:', error);
+      shopify?.toast?.show?.('Unable to return to the POS cart automatically. Please close the modal manually.', {
+        isError: true,
+      });
     }
   };
 
@@ -129,6 +214,7 @@ function Modal() {
     setModelOther('');
     setModels([]);
     setErrors({});
+    setPaymentMode('pos');
   };
 
 
@@ -331,6 +417,67 @@ function Modal() {
     return Object.keys(newErrors).length === 0;
   };
 
+  const addDepositToPosCart = async ({
+    ticketId,
+    ticketSuffix,
+    depositAmount,
+  }) => {
+    try {
+      const cartApi = shopify?.cart || shopify?.pos?.cart;
+
+      if (!cartApi?.addCustomSale) {
+        return {
+          success: false,
+          error:
+            'POS cart API is not available. Ensure this extension is running in the POS app (not Admin) and that the device is updated.',
+        };
+      }
+
+      const amountNumber = parseFloat(depositAmount);
+      if (!amountNumber || amountNumber <= 0) {
+        return { success: false, error: 'Invalid deposit amount for POS cart.' };
+      }
+
+      const title = ticketSuffix
+        ? `Repair Deposit - Ticket #${ticketSuffix}`
+        : 'Repair Deposit';
+
+      await cartApi.addCustomSale({
+        title,
+        price: amountNumber.toFixed(2),
+        quantity: 1,
+        taxable: false,
+      });
+
+      if (cartApi.addCartProperties) {
+        await cartApi.addCartProperties({
+          repairpilot_ticket_id: ticketId || '',
+          repairpilot_payment_type: 'deposit',
+        });
+      }
+
+      return { success: true };
+    } catch (error) {
+      console.error('Failed to add deposit to POS cart:', error);
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Unknown error adding item to cart',
+      };
+    }
+  };
+
+  const formatDepositAmount = (amount) => {
+    const numeric = typeof amount === 'number' ? amount : parseFloat(amount || '0');
+    if (!Number.isFinite(numeric) || numeric <= 0) {
+      return '0.00';
+    }
+    return numeric.toFixed(2);
+  };
+
+  
 
 
   const submit = async () => {
@@ -371,7 +518,9 @@ function Modal() {
         depositAmount: parseFloat(financialInfo.depositAmount),
 
         // Technician assignment
-        technicianId: selectedTechnicianId || undefined
+        technicianId: selectedTechnicianId || undefined,
+
+        paymentMode,
       };
 
       console.log("Ticket data:", ticketData);
@@ -408,18 +557,44 @@ function Modal() {
         const ticketMessage = ticketSuffix
           ? `Repair ticket created successfully. Ticket ID ending ${ticketSuffix}.`
           : 'Repair ticket created successfully.';
+        let posCartStatus = null;
+        if (paymentMode === 'pos') {
+          posCartStatus = await addDepositToPosCart({
+            ticketId: result.ticketId,
+            ticketSuffix,
+            depositAmount: result.depositAmount || financialInfo.depositAmount,
+          });
+        }
+
         const toastParts = [ticketMessage];
 
-        if (result.intakeInvoiceUrl) {
-          toastParts.push('Deposit invoice created and sent to customer.');
-        } else if (result.draftOrderId) {
-          toastParts.push('Deposit draft order created for payment.');
+        if (paymentMode === 'invoice') {
+          if (result.intakeInvoiceUrl) {
+            toastParts.push('Deposit invoice created and sent to customer.');
+          } else if (result.draftOrderId) {
+            toastParts.push('Deposit draft order created for payment.');
+          }
+        } else if (posCartStatus?.success) {
+          toastParts.push('Deposit added to the POS cart. Proceed to checkout to collect payment.');
+        } else if (posCartStatus) {
+          toastParts.push(
+            `Ticket created. Add the deposit manually to the POS cart${
+              posCartStatus.error ? ` (${posCartStatus.error}).` : '.'
+            }`,
+          );
         }
 
         shopify?.toast?.show?.(toastParts.join(' '));
 
-        resetForm();
-        close();
+        setSuccessInfo({
+          ticketId: result.ticketId,
+          ticketSuffix,
+          intakeInvoiceUrl: result.intakeInvoiceUrl,
+          draftOrderId: result.draftOrderId,
+          paymentMode,
+          depositAmount: result.depositAmount || parseFloat(financialInfo.depositAmount),
+          posCartStatus,
+        });
       } else {
         shopify?.toast?.show?.(result.error || 'Failed to create ticket', { isError: true });
       }
@@ -430,6 +605,89 @@ function Modal() {
       setIsSubmitting(false);
     }
   };
+
+  const handleCreateAnother = () => {
+    resetForm();
+    setSuccessInfo(null);
+  };
+
+  if (successInfo) {
+    if (successInfo.paymentMode === 'pos') {
+      return (
+        <s-screen heading="Repair Ticket Created">
+          <s-scroll-box padding="large">
+            <s-stack direction="block" gap="large">
+              <s-stack direction="block" gap="tight">
+                <s-text type="strong">Success!</s-text>
+                <s-text>
+                  The repair ticket has been created successfully
+                  {successInfo.ticketSuffix ? ` (ID ending ${successInfo.ticketSuffix})` : ''}.
+                </s-text>
+                {successInfo.posCartStatus?.success ? (
+                  <s-text>
+                    The deposit has been added to the POS cart. Review the cart and complete the
+                    payment using the POS checkout.
+                  </s-text>
+                ) : (
+                  <s-text tone="critical">
+                    We couldn't add the deposit to the POS cart automatically
+                    {successInfo.posCartStatus?.error
+                      ? ` (${successInfo.posCartStatus.error}).`
+                      : '.'}{' '}
+                    Add a custom sale in the cart for $
+                    {formatDepositAmount(successInfo.depositAmount || financialInfo.depositAmount)} and
+                    charge the customer.
+                  </s-text>
+                )}
+              </s-stack>
+
+              <s-stack direction="block" gap="base">
+                <s-button variant="primary" onClick={returnToPosCart}>
+                  Return to POS cart
+                </s-button>
+                <s-button variant="secondary" onClick={handleCreateAnother}>
+                  Create another ticket
+                </s-button>
+              </s-stack>
+            </s-stack>
+          </s-scroll-box>
+        </s-screen>
+      );
+    }
+
+    return (
+      <s-screen heading="Repair Ticket Created">
+        <s-scroll-box padding="large">
+          <s-stack direction="block" gap="large">
+            <s-stack direction="block" gap="tight">
+              <s-text type="strong">Success!</s-text>
+              <s-text>
+                The repair ticket has been created successfully
+                {successInfo.ticketSuffix ? ` (ID ending ${successInfo.ticketSuffix})` : ''}.
+              </s-text>
+              {successInfo.intakeInvoiceUrl ? (
+                <s-text>
+                  The customer has been sent a payment link for the deposit. You can also view the
+                  invoice in Shopify Admin.
+                </s-text>
+              ) : successInfo.draftOrderId ? (
+                <s-text>
+                  A draft order for the deposit was created. You can complete the payment in Shopify
+                  Admin.
+                </s-text>
+              ) : null}
+            </s-stack>
+
+            <s-stack direction="block" gap="base">
+              <s-button variant="primary" onClick={handleCreateAnother}>
+                Create another ticket
+              </s-button>
+            </s-stack>
+          </s-stack>
+        </s-scroll-box>
+      </s-screen>
+    );
+  }
 
   return (
     <s-screen heading="Create Repair Ticket">
@@ -760,19 +1018,43 @@ function Modal() {
               />
             </s-stack>
             {financialInfo.quotedAmount && financialInfo.depositAmount && (
-              <s-box padding="base" borderWidth="base">
-                <s-stack direction="block" gap="tight">
-                  <s-text type="strong">Payment Summary</s-text>
-                  <s-stack direction="block" gap="none">
-                    <s-text type="small">Total Quote: ${parseFloat(financialInfo.quotedAmount || 0).toFixed(2)}</s-text>
-                    <s-text type="small">Deposit Paid: ${parseFloat(financialInfo.depositAmount || 0).toFixed(2)}</s-text>
-                    <s-text type="strong" tone="critical">
-                      Remaining Balance: ${(parseFloat(financialInfo.quotedAmount || 0) - parseFloat(financialInfo.depositAmount || 0)).toFixed(2)}
-                    </s-text>
-                  </s-stack>
+              <s-box background="highlight" padding="base" border="subdued" cornerRadius="medium">
+                <s-stack direction="block" gap="none">
+                  <s-text tone="subdued" type="small">
+                    Summary
+                  </s-text>
+                </s-stack>
+                <s-stack direction="block" gap="none">
+                  <s-text type="small">Total Quote: ${parseFloat(financialInfo.quotedAmount || 0).toFixed(2)}</s-text>
+                  <s-text type="small">Deposit Paid: ${parseFloat(financialInfo.depositAmount || 0).toFixed(2)}</s-text>
+                  <s-text type="strong" tone="critical">
+                    Remaining Balance: ${(parseFloat(financialInfo.quotedAmount || 0) - parseFloat(financialInfo.depositAmount || 0)).toFixed(2)}
+                  </s-text>
                 </s-stack>
               </s-box>
             )}
+
+            <s-stack direction="block" gap="tight">
+              <s-text type="strong">Payment Method</s-text>
+              <s-stack direction="inline" gap="tight">
+                <s-button
+                  variant={paymentMode === 'pos' ? 'primary' : 'secondary'}
+                  onClick={() => setPaymentMode('pos')}
+                >
+                  Collect in POS
+                </s-button>
+                <s-button
+                  variant={paymentMode === 'invoice' ? 'primary' : 'secondary'}
+                  onClick={() => setPaymentMode('invoice')}
+                >
+                  Send Invoice
+                </s-button>
+              </s-stack>
+              <s-text tone="subdued" type="small">
+                Collect in POS adds the deposit to the current cart so you can charge the customer right
+                away. Send Invoice emails a draft order for later payment.
+              </s-text>
+            </s-stack>
           </s-stack>
         </s-section>
 

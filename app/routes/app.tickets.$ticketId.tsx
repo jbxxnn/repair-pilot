@@ -8,6 +8,7 @@ import { formatCurrency } from "../utils/currency";
 import type { Ticket } from "./api.tickets.list";
 import prisma from "../db.server";
 import { getStaffMember } from "../services/shopify.server";
+import type { CSSProperties, ComponentType } from "react";
 
 export const loader = async ({ request, params }: LoaderFunctionArgs) => {
   const { session } = await authenticate.admin(request);
@@ -69,6 +70,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     remainingAmount: ticket.remainingAmount.toNumber(),
     intakeOrderId: ticket.intakeOrderId,
     finalOrderId: ticket.finalOrderId,
+    depositPaymentOrderId: ticket.depositPaymentOrderId,
+    depositPaymentOrderName: ticket.depositPaymentOrderName,
+    depositPaymentMethod: ticket.depositPaymentMethod,
+    depositCollectedAt: ticket.depositCollectedAt,
+    depositCollectedAmount: ticket.depositCollectedAmount ? ticket.depositCollectedAmount.toNumber() : null,
     technicianId: ticket.technicianId,
     technician,
     createdAt: ticket.createdAt,
@@ -108,7 +114,7 @@ export default function TicketDetail() {
   const [confirmationDialog, setConfirmationDialog] = useState<{ show: boolean; message: string; onConfirm: () => void; onCancel: () => void } | null>(null);
   const [orderStatuses, setOrderStatuses] = useState<Record<string, { status: string | null; isPaid: boolean; financialStatus: string | null; orderName: string | null }>>({});
   const [loadingOrderStatuses, setLoadingOrderStatuses] = useState(false);
-  const [QRCodeComponent, setQRCodeComponent] = useState<React.ComponentType<{ value: string; size: number; level: string; includeMargin: boolean; className: string }> | null>(null);
+  const [QRCodeComponent, setQRCodeComponent] = useState<ComponentType<{ value: string; size: number; level: string; includeMargin: boolean; className: string }> | null>(null);
   
   // Generate QR code URL with shop domain for proper authentication
   const qrCodeUrl = typeof window !== "undefined" 
@@ -741,6 +747,25 @@ export default function TicketDetail() {
     }
   };
 
+  const partFormGridStyle: CSSProperties = {
+    display: "grid",
+    gap: "1rem",
+    alignItems: "end",
+    gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))",
+    width: "100%",
+  };
+
+  const baseInputStyle: CSSProperties = {
+    width: "100%",
+    padding: "0.625rem 0.75rem",
+    borderRadius: "8px",
+    border: "2px solid #38bdf8",
+    fontSize: "14px",
+    transition: "all 0.2s",
+    outline: "none",
+    boxSizing: "border-box",
+  };
+
   return (
     <s-page heading={`Ticket #${displayTicketId}`}>
       <div style={{ marginBottom: "1.5rem" }}>
@@ -832,6 +857,7 @@ export default function TicketDetail() {
 
                       const uploadResponse = await fetch("/api/photos/upload", {
                         method: "POST",
+                        credentials: "include",
                         body: formData,
                       });
 
@@ -845,6 +871,7 @@ export default function TicketDetail() {
 
                       const addResponse = await fetch("/api/tickets/add-photos", {
                         method: "POST",
+                        credentials: "include",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({
                           ticketId: currentTicket.id,
@@ -958,8 +985,30 @@ export default function TicketDetail() {
               <div style={{ padding: "1rem", background: "#f0fdf4", borderRadius: "8px", border: "1px solid #86efac" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Quoted Amount</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#059669", marginTop: "0.5rem" }}>{currentTicket.quotedAmount ? formatCurrency(currentTicket.quotedAmount) : "N/A"}</div></div>
               <div style={{ padding: "1rem", background: "#ecfdf5", borderRadius: "8px", border: "1px solid #6ee7b7" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Deposit</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#059669", marginTop: "0.5rem" }}>{formatCurrency(currentTicket.depositAmount)}</div></div>
               {currentTicket.remainingAmount > 0 && <div style={{ padding: "1rem", background: "#fef2f2", borderRadius: "8px", border: "1px solid #fca5a5" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Remaining</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#dc2626", marginTop: "0.5rem" }}>{formatCurrency(currentTicket.remainingAmount)}</div></div>}
-            </div>
-          </section>
+            {currentTicket.depositCollectedAt ? (
+              <div style={{ gridColumn: "1 / -1", padding: "1rem", background: "#eff6ff", borderRadius: "8px", border: "1px solid #bfdbfe" }}>
+                <label style={{ fontSize: "12px", color: "#1d4ed8", fontWeight: "600" }}>Deposit Collected</label>
+                <div style={{ marginTop: "0.5rem", color: "#1e3a8a", fontWeight: 600, fontSize: "16px" }}>
+                  {formatCurrency(currentTicket.depositCollectedAmount ?? currentTicket.depositAmount)}
+                </div>
+                <div style={{ marginTop: "0.25rem", fontSize: "13px", color: "#1e40af" }}>
+                  Collected via {currentTicket.depositPaymentMethod || "POS"}
+                  {currentTicket.depositPaymentOrderName ? ` · Order ${currentTicket.depositPaymentOrderName}` : ""}
+                </div>
+                <div style={{ marginTop: "0.25rem", fontSize: "12px", color: "#1d4ed8" }}>
+                  {"on " + new Date(currentTicket.depositCollectedAt).toLocaleString()}
+                </div>
+              </div>
+            ) : (
+              <div style={{ gridColumn: "1 / -1", padding: "1rem", background: "#fefce8", borderRadius: "8px", border: "1px solid #fcd34d" }}>
+                <label style={{ fontSize: "12px", color: "#92400e", fontWeight: "600" }}>Deposit Outstanding</label>
+                <div style={{ marginTop: "0.5rem", fontSize: "13px", color: "#78350f" }}>
+                  Waiting for POS payment. If you collected payment outside POS, you can manually mark it as received.
+                </div>
+              </div>
+            )}
+          </div>
+        </section>
 
           <section style={{ marginBottom: "2rem" }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: "1rem" }}>
@@ -978,7 +1027,7 @@ export default function TicketDetail() {
                 {showAddPart && (
                   <div style={{ padding: "1.25rem", background: "linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)", borderRadius: "12px", marginBottom: "1rem", border: "2px solid #0ea5e9", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
                     <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleAddPart(e); }}>
-                      <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: "1rem", alignItems: "end" }}>
+                      <div style={partFormGridStyle}>
                         <div>
                           <label style={{ fontSize: "12px", color: "#0c4a6e", fontWeight: "600", display: "block", marginBottom: "0.5rem" }}>Part Name</label>
                           <input 
@@ -988,7 +1037,7 @@ export default function TicketDetail() {
                             onChange={(e) => { setPartForm({ ...partForm, name: e.target.value }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
                             placeholder="e.g., iPhone 12 LCD Screen" 
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1002,7 +1051,7 @@ export default function TicketDetail() {
                             onChange={(e) => { setPartForm({ ...partForm, sku: e.target.value }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
                             placeholder="Optional" 
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1016,7 +1065,7 @@ export default function TicketDetail() {
                             value={partForm.quantity} 
                             onChange={(e) => { setPartForm({ ...partForm, quantity: parseInt(e.target.value) || 1 }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1031,7 +1080,7 @@ export default function TicketDetail() {
                             value={partForm.cost} 
                             onChange={(e) => { setPartForm({ ...partForm, cost: parseFloat(e.target.value) || 0 }); setPartError(null); }}
                             onKeyDown={(e) => handleKeyDown(e, () => handleAddPart(e))}
-                            style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #38bdf8", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                            style={baseInputStyle}
                             onFocus={(e) => e.target.style.borderColor = "#0ea5e9"}
                             onBlur={(e) => e.target.style.borderColor = "#38bdf8"}
                           />
@@ -1071,7 +1120,7 @@ export default function TicketDetail() {
                         {editingPart === part.id ? (
                           <div style={{ padding: "1.25rem", background: "linear-gradient(135deg, #fef3c7 0%, #fde68a 100%)", borderRadius: "12px", border: "2px solid #f59e0b", boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)" }}>
                             <form onSubmit={(e) => { e.preventDefault(); e.stopPropagation(); handleUpdatePart(part.id, e); }}>
-                              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr auto", gap: "1rem", alignItems: "end" }}>
+                              <div style={partFormGridStyle}>
                                 <div>
                                   <label style={{ fontSize: "12px", color: "#78350f", fontWeight: "600", display: "block", marginBottom: "0.5rem" }}>Part Name</label>
                                   <input 
@@ -1081,7 +1130,7 @@ export default function TicketDetail() {
                                     onChange={(e) => { setPartForm({ ...partForm, name: e.target.value }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
                                     placeholder="e.g., iPhone 12 LCD Screen" 
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={{ ...baseInputStyle, border: "2px solid #fbbf24" }}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />
@@ -1095,7 +1144,7 @@ export default function TicketDetail() {
                                     onChange={(e) => { setPartForm({ ...partForm, sku: e.target.value }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
                                     placeholder="Optional" 
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={{ ...baseInputStyle, border: "2px solid #fbbf24" }}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />
@@ -1109,7 +1158,7 @@ export default function TicketDetail() {
                                     value={partForm.quantity} 
                                     onChange={(e) => { setPartForm({ ...partForm, quantity: parseInt(e.target.value) || 1 }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={baseInputStyle}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />
@@ -1124,7 +1173,7 @@ export default function TicketDetail() {
                                     value={partForm.cost} 
                                     onChange={(e) => { setPartForm({ ...partForm, cost: parseFloat(e.target.value) || 0 }); setPartError(null); }}
                                     onKeyDown={(e) => handleKeyDown(e, () => handleUpdatePart(part.id, e))}
-                                    style={{ width: "100%", padding: "0.625rem 0.75rem", borderRadius: "8px", border: "2px solid #fbbf24", fontSize: "14px", transition: "all 0.2s", outline: "none" }}
+                                    style={baseInputStyle}
                                     onFocus={(e) => e.target.style.borderColor = "#f59e0b"}
                                     onBlur={(e) => e.target.style.borderColor = "#fbbf24"}
                                   />

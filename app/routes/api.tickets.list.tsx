@@ -20,6 +20,11 @@ export interface Ticket {
   remainingAmount: number;
   intakeOrderId: string | null;
   finalOrderId: string | null;
+  depositPaymentOrderId: string | null;
+  depositPaymentOrderName: string | null;
+  depositPaymentMethod: string | null;
+  depositCollectedAt: Date | null;
+  depositCollectedAmount: number | null;
   technicianId: string | null;
   technician?: {
     id: string;
@@ -223,6 +228,11 @@ export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response>
           remainingAmount: ticket.remainingAmount.toNumber(),
           intakeOrderId: ticket.intakeOrderId,
           finalOrderId: ticket.finalOrderId,
+          depositPaymentOrderId: ticket.depositPaymentOrderId,
+          depositPaymentOrderName: ticket.depositPaymentOrderName,
+          depositPaymentMethod: ticket.depositPaymentMethod,
+          depositCollectedAt: ticket.depositCollectedAt,
+          depositCollectedAmount: ticket.depositCollectedAmount ? ticket.depositCollectedAmount.toNumber() : null,
           technicianId: ticket.technicianId,
           technician,
           createdAt: ticket.createdAt,

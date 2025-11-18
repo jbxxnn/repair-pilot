@@ -32,6 +32,9 @@ export interface CreateTicketRequest {
   
   // Photos (array of photo URLs)
   photos?: string[];
+
+  // Payment handling
+  paymentMode?: 'pos' | 'invoice';
 }
 
 export interface CreateTicketResponse {
@@ -41,6 +44,8 @@ export interface CreateTicketResponse {
   intakeOrderId?: string;
   intakeInvoiceUrl?: string; // URL to complete the draft order payment
   customerId?: string;
+  paymentMode?: 'pos' | 'invoice';
+  depositAmount?: number;
   error?: string;
 }
 
@@ -84,6 +89,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
 
     // Parse request body
     const body = await request.json() as CreateTicketRequest;
+    const paymentMode = body.paymentMode === 'pos' ? 'pos' : 'invoice';
     
     // Validate required fields
     if (!body.depositAmount || !isValidAmount(body.depositAmount)) {
@@ -196,7 +202,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
     let intakeOrderId: string | undefined;
     let intakeInvoiceUrl: string | undefined;
 
-    if (body.depositAmount > 0) {
+    if (paymentMode === 'invoice' && body.depositAmount > 0) {
       try {
         const draftOrder = await createPosOrder(request, {
           customerId: customerId,
@@ -246,6 +252,8 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
       intakeOrderId: intakeOrderId,
       intakeInvoiceUrl: intakeInvoiceUrl,
       customerId: customerId,
+      paymentMode,
+      depositAmount: body.depositAmount,
     };
 
     return new Response(JSON.stringify(response), { 

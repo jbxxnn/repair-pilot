@@ -99,13 +99,15 @@ export default async function handler(req, res) {
       headers: new Headers(req.headers),
     };
 
-    // Add body for non-GET requests
+    // Add body for non-GET/HEAD requests by buffering the raw stream
     if (req.method !== "GET" && req.method !== "HEAD") {
-      if (req.body) {
-        requestInit.body = typeof req.body === "string" 
-          ? req.body 
-          : JSON.stringify(req.body);
+      const bodyChunks = [];
+      for await (const chunk of req) {
+        bodyChunks.push(typeof chunk === "string" ? Buffer.from(chunk) : chunk);
       }
+      const bodyBuffer = Buffer.concat(bodyChunks);
+      requestInit.body = bodyBuffer;
+      requestInit.duplex = "half";
     }
 
     const request = new Request(fullUrl, requestInit);
