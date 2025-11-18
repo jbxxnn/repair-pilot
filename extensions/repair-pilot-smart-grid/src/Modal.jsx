@@ -87,9 +87,9 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
   }, [isOpen]);
 
   return (
-    <s-stack direction="block" gap="base">
+    <s-stack direction="block" gap="tight">
       {label && <s-text type="strong">{label}</s-text>}
-      <s-stack direction="block" gap="none">
+      <s-box position="relative">
         {/* Dropdown trigger button - styled like a select field */}
         <s-button
           variant={isOpen ? 'primary' : 'secondary'}
@@ -109,12 +109,26 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
         
         {/* Dropdown menu - appears below the button */}
         {isOpen && (
-          <s-box padding="none" cornerRadius="base">
+          <s-box
+            background="surface"
+            borderWidth="base"
+            border="base"
+            cornerRadius="base"
+            padding="none"
+            marginTop="tight"
+            position="absolute"
+            style={{
+              width: '100%',
+              zIndex: 1000,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            }}
+          >
             <s-stack direction="block" gap="none">
               {/* Search field for large lists */}
               {options.length > 10 && (
-                <s-box padding="base">
+                <s-box padding="base" borderWidth="base" borderBottom="base" background="base">
                   <s-search-field
+                    label="Search"
                     value={searchTerm}
                     onInput={(e) => {
                       // Real-time filtering as user types
@@ -127,51 +141,60 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
               )}
               
               {/* Scrollable options list - fixed height with scrollbar */}
-              <s-box padding="none">
+              <s-box background="base">
                 <s-scroll-box blockSize="250px" maxBlockSize="250px">
                   <s-stack direction="block" gap="none">
-                    {visibleOptions.length === 0 ? (
-                      <s-box padding="base">
-                        <s-text type="small">No matches found</s-text>
-                      </s-box>
-                    ) : (
-                      <>
-                        {visibleOptions.map((option) => (
-                          <s-box key={option.value} padding="none">
-                            <s-button
-                              variant="secondary"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleSelect(option.value);
-                              }}
+                  {visibleOptions.length === 0 ? (
+                    <s-box padding="base">
+                      <s-text tone="subdued" align="center">No matches found</s-text>
+                    </s-box>
+                  ) : (
+                    <>
+                      {visibleOptions.map((option, index) => (
+                        <s-box
+                          key={option.value}
+                          padding="base"
+                          background={value === option.value ? 'highlight' : 'base'}
+                          borderWidth={index > 0 ? 'base' : 'none'}
+                          borderTop={index > 0 ? 'base' : 'none'}
+                        >
+                          <s-button
+                            variant="plain"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelect(option.value);
+                            }}
+                            fullWidth
+                          >
+                            <s-text 
+                              align="start" 
+                              tone={value === option.value ? 'base' : 'base'}
+                              type={value === option.value ? 'strong' : 'body'}
                             >
-                              <s-text 
-                                type={value === option.value ? 'strong' : undefined}
-                              >
-                                {option.label}
-                              </s-text>
-                            </s-button>
-                          </s-box>
-                        ))}
-                        {hasMoreResults && (
-                          <s-box padding="base">
-                            <s-text type="small">
-                              Showing first {MAX_VISIBLE_OPTIONS} of {filteredOptions.length} results
+                              {option.label}
                             </s-text>
-                            <s-text type="small">
-                              Refine your search to see more
-                            </s-text>
-                          </s-box>
-                        )}
-                      </>
-                    )}
+                          </s-button>
+                        </s-box>
+                      ))}
+                      {hasMoreResults && (
+                        <s-box padding="base" background="subdued">
+                          <s-text tone="subdued" type="small" align="center">
+                            Showing first {MAX_VISIBLE_OPTIONS} of {filteredOptions.length} results
+                          </s-text>
+                          <s-text tone="subdued" type="small" align="center">
+                            Refine your search to see more
+                          </s-text>
+                        </s-box>
+                      )}
+                    </>
+                  )}
                   </s-stack>
                 </s-scroll-box>
               </s-box>
             </s-stack>
           </s-box>
         )}
-      </s-stack>
+      </s-box>
       {error && (
         <s-text tone="critical" type="small">{error}</s-text>
       )}
