@@ -110,7 +110,7 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
         {/* Dropdown menu - appears below the button */}
         {isOpen && (
           <s-box
-            background="base"
+            background="surface"
             borderWidth="base"
             border="base"
             cornerRadius="base"
