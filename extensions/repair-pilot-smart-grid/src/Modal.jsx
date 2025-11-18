@@ -261,15 +261,25 @@ function Modal() {
             'Content-Type': 'application/json',
           },
         });
+        console.log('Device types response status:', response.status);
         if (response.ok) {
           const data = await response.json();
+          console.log('Device types data:', data);
           if (data.success) {
             setDeviceTypes(data.deviceTypes || []);
+            console.log('Loaded device types:', data.deviceTypes?.length || 0);
+          } else {
+            console.error('Device types API returned success=false:', data.error);
+            shopify?.toast?.show?.(`Failed to load device types: ${data.error || 'Unknown error'}`, { isError: true });
           }
+        } else {
+          const errorText = await response.text();
+          console.error('Device types API error:', response.status, errorText);
+          shopify?.toast?.show?.(`Failed to load device types (${response.status})`, { isError: true });
         }
       } catch (error) {
         console.error('Failed to load device types:', error);
-        shopify?.toast?.show?.('Failed to load device types', { isError: true });
+        shopify?.toast?.show?.(`Failed to load device types: ${error.message || 'Network error'}`, { isError: true });
       } finally {
         setLoadingDeviceTypes(false);
       }
@@ -289,15 +299,25 @@ function Modal() {
             'Content-Type': 'application/json',
           },
         });
+        console.log('Brands response status:', response.status);
         if (response.ok) {
           const data = await response.json();
+          console.log('Brands data:', data);
           if (data.success) {
             setBrands(data.brands || []);
+            console.log('Loaded brands:', data.brands?.length || 0);
+          } else {
+            console.error('Brands API returned success=false:', data.error);
+            shopify?.toast?.show?.(`Failed to load brands: ${data.error || 'Unknown error'}`, { isError: true });
           }
+        } else {
+          const errorText = await response.text();
+          console.error('Brands API error:', response.status, errorText);
+          shopify?.toast?.show?.(`Failed to load brands (${response.status})`, { isError: true });
         }
       } catch (error) {
         console.error('Failed to load brands:', error);
-        shopify?.toast?.show?.('Failed to load brands', { isError: true });
+        shopify?.toast?.show?.(`Failed to load brands: ${error.message || 'Network error'}`, { isError: true });
       } finally {
         setLoadingBrands(false);
       }
@@ -837,6 +857,10 @@ function Modal() {
               <s-box padding="base">
                 <s-text tone="subdued">Loading device types...</s-text>
               </s-box>
+            ) : deviceTypes.length === 0 ? (
+              <s-box padding="base">
+                <s-text tone="critical">No device types available. Please check your connection.</s-text>
+              </s-box>
             ) : (
               <s-stack direction="block" gap="tight">
                 <s-select
@@ -880,6 +904,10 @@ function Modal() {
             {loadingBrands ? (
               <s-box padding="base">
                 <s-text tone="subdued">Loading brands...</s-text>
+              </s-box>
+            ) : brands.length === 0 ? (
+              <s-box padding="base">
+                <s-text tone="critical">No brands available. Please check your connection.</s-text>
               </s-box>
             ) : (
               <s-stack direction="block" gap="tight">
