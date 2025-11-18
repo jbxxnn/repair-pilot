@@ -6,8 +6,9 @@
     "target": "ES2020",
     "checkJs": true,
     "allowJs": true,
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
-    "noEmit": true
+    "noEmit": true,
+    "resolvePackageJsonExports": true
   }
 }

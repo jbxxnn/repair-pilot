@@ -26,8 +26,9 @@ api_version = "2026-01"
 
 [access_scopes]
 # Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
-# Note: read_users scope required for technician/staff member selection (deferred for later)
-scopes = "write_products,write_customers,read_customers,write_draft_orders,write_files,read_orders,read_users"
+# Note: read_users scope required for technician/staff member selection (deferred for later - requires Shopify approval)
+# Temporarily removed to allow deployment. Add back after scope approval.
+scopes = "write_products,write_customers,read_customers,write_draft_orders,write_files,read_orders"
 
 [auth]
 # Update this to your production URL before deploying
