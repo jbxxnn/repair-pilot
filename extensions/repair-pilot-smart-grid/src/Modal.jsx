@@ -36,6 +36,7 @@ const createInitialFinancialInfo = () => ({
 });
 
 // Custom Dropdown Component for POS Extensions
+// Based on Shopify AI recommendations: Use primitives only, no s-choice-list
 function Dropdown({ label, value, options, onChange, error, placeholder = "Select..." }) {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -49,19 +50,28 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
       )
     : options;
 
+  // Limit visible options for performance (show first 50)
+  const MAX_VISIBLE_OPTIONS = 50;
+  const visibleOptions = filteredOptions.slice(0, MAX_VISIBLE_OPTIONS);
+  const hasMoreResults = filteredOptions.length > MAX_VISIBLE_OPTIONS;
+
   const handleSelect = (optionValue) => {
     onChange(optionValue);
     setIsOpen(false);
     setSearchTerm('');
   };
 
-  // Close dropdown when clicking outside (handled by modal overlay)
+  // Close dropdown when clicking outside
   useEffect(() => {
     if (!isOpen) return;
     
-    const handleClickOutside = () => {
-      setIsOpen(false);
-      setSearchTerm('');
+    const handleClickOutside = (e) => {
+      // Don't close if clicking inside the dropdown
+      const dropdownElement = e.target.closest('s-box');
+      if (!dropdownElement) {
+        setIsOpen(false);
+        setSearchTerm('');
+      }
     };
 
     // Use a small delay to avoid immediate close on open
@@ -101,36 +111,45 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
             padding="base"
             marginTop="tight"
           >
-            {/* Search field for large lists */}
+            {/* Use s-search-field for search (recommended by Shopify AI) */}
             {options.length > 10 && (
-              <s-text-field
+              <s-search-field
                 label="Search"
                 value={searchTerm}
-                onInput={(e) => setSearchTerm(e.target.value)}
+                onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Type to search..."
               />
             )}
             
-            <s-scroll-box maxHeight="300px">
+            <s-scroll-box>
               <s-stack direction="block" gap="none">
-                {filteredOptions.length === 0 ? (
+                {visibleOptions.length === 0 ? (
                   <s-box padding="base">
                     <s-text tone="subdued">No matches found</s-text>
                   </s-box>
                 ) : (
-                  filteredOptions.map((option) => (
-                    <s-button
-                      key={option.value}
-                      variant={value === option.value ? 'primary' : 'secondary'}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleSelect(option.value);
-                      }}
-                      fullWidth
-                    >
-                      <s-text align="start">{option.label}</s-text>
-                    </s-button>
-                  ))
+                  <>
+                    {visibleOptions.map((option) => (
+                      <s-button
+                        key={option.value}
+                        variant={value === option.value ? 'primary' : 'secondary'}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleSelect(option.value);
+                        }}
+                        fullWidth
+                      >
+                        <s-text align="start">{option.label}</s-text>
+                      </s-button>
+                    ))}
+                    {hasMoreResults && (
+                      <s-box padding="base">
+                        <s-text tone="subdued">
+                          Showing first {MAX_VISIBLE_OPTIONS} of {filteredOptions.length} results. Refine your search to see more.
+                        </s-text>
+                      </s-box>
+                    )}
+                  </>
                 )}
               </s-stack>
             </s-scroll-box>
