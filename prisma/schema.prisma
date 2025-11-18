@@ -30,6 +30,7 @@ model Ticket {
   deviceBrand      String?     @map("device_brand")
   deviceModel      String?     @map("device_model")
   serial           String?
+  repairType       String?     @map("repair_type")
   issueDescription String?     @map("issue_description")
   photos           Json        @default("[]")
   quotedAmount     Decimal?    @map("quoted_amount") @db.Decimal(10, 2)
@@ -134,4 +135,14 @@ model Model {
   @@unique([brandId, name])
   @@index([brandId], map: "idx_models_brand")
   @@map("models")
+}
+
+model RepairType {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name      String   @unique
+  displayOrder Int    @default(0) @map("display_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("repair_types")
 }

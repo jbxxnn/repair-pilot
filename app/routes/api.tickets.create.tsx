@@ -21,6 +21,7 @@ export interface CreateTicketRequest {
   deviceBrand?: string;
   deviceModel?: string;
   serial?: string;
+  repairType?: string;
   issueDescription?: string;
   
   // Financial data
@@ -175,6 +176,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
         deviceBrand: body.deviceBrand,
         deviceModel: body.deviceModel,
         serial: body.serial,
+        repairType: body.repairType,
         issueDescription: body.issueDescription,
                   photos: [], // Photos will be added later via admin UI
         quotedAmount: quotedAmount,

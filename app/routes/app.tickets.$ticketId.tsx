@@ -63,6 +63,7 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     deviceBrand: ticket.deviceBrand,
     deviceModel: ticket.deviceModel,
     serial: ticket.serial,
+    repairType: ticket.repairType,
     issueDescription: ticket.issueDescription,
     photos: Array.isArray(ticket.photos) ? ticket.photos : [],
     quotedAmount: ticket.quotedAmount ? ticket.quotedAmount.toNumber() : null,
@@ -817,6 +818,7 @@ export default function TicketDetail() {
               <div><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Brand</label><div style={{ fontSize: "14px", color: "#111827", marginTop: "0.25rem" }}>{currentTicket.deviceBrand || "N/A"}</div></div>
               <div><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Model</label><div style={{ fontSize: "14px", color: "#111827", marginTop: "0.25rem" }}>{currentTicket.deviceModel || "N/A"}</div></div>
               {currentTicket.serial && <div><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Serial Number</label><div style={{ fontSize: "14px", color: "#111827", marginTop: "0.25rem", fontFamily: "monospace" }}>{currentTicket.serial}</div></div>}
+              {currentTicket.repairType && <div><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Repair Type</label><div style={{ fontSize: "14px", color: "#111827", marginTop: "0.25rem" }}>{currentTicket.repairType}</div></div>}
             </div>
           </section>
 

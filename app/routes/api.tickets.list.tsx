@@ -13,6 +13,7 @@ export interface Ticket {
   deviceBrand: string | null;
   deviceModel: string | null;
   serial: string | null;
+  repairType: string | null;
   issueDescription: string | null;
   photos: string[];
   quotedAmount: number | null;
@@ -222,6 +223,7 @@ export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response>
           deviceBrand: ticket.deviceBrand,
           deviceModel: ticket.deviceModel,
           serial: ticket.serial,
+          repairType: ticket.repairType,
           issueDescription: ticket.issueDescription,
           photos: Array.isArray(ticket.photos) ? ticket.photos : [],
           quotedAmount: ticket.quotedAmount ? ticket.quotedAmount.toNumber() : null,

@@ -27,6 +27,7 @@ const createInitialDeviceInfo = () => ({
   brand: '',
   model: '',
   serial: '',
+  repairType: '',
   issueDescription: '',
 });
 
@@ -219,15 +220,19 @@ function Modal() {
   const [deviceTypes, setDeviceTypes] = useState([]);
   const [brands, setBrands] = useState([]);
   const [models, setModels] = useState([]);
+  const [repairTypes, setRepairTypes] = useState([]);
   const [selectedDeviceTypeId, setSelectedDeviceTypeId] = useState('');
   const [selectedBrandId, setSelectedBrandId] = useState('');
   const [selectedModelId, setSelectedModelId] = useState('');
+  const [selectedRepairTypeId, setSelectedRepairTypeId] = useState('');
   const [deviceTypeOther, setDeviceTypeOther] = useState('');
   const [brandOther, setBrandOther] = useState('');
   const [modelOther, setModelOther] = useState('');
+  const [repairTypeOther, setRepairTypeOther] = useState('');
   const [loadingDeviceTypes, setLoadingDeviceTypes] = useState(true);
   const [loadingBrands, setLoadingBrands] = useState(true);
   const [loadingModels, setLoadingModels] = useState(false);
+  const [loadingRepairTypes, setLoadingRepairTypes] = useState(true);
 
   // Financial state
   const [financialInfo, setFinancialInfo] = useState(createInitialFinancialInfo);
@@ -452,6 +457,44 @@ function Modal() {
     };
 
     fetchDeviceTypes();
+  }, []);
+
+  // Fetch repair types on mount
+  useEffect(() => {
+    const fetchRepairTypes = async () => {
+      setLoadingRepairTypes(true);
+      try {
+        const response = await fetch(`${APP_URL}/api/repair-types`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+        console.log('Repair types response status:', response.status);
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Repair types data:', data);
+          if (data.success) {
+            setRepairTypes(data.repairTypes || []);
+            console.log('Loaded repair types:', data.repairTypes?.length || 0);
+          } else {
+            console.error('Repair types API returned success=false:', data.error);
+            shopify?.toast?.show?.(`Failed to load repair types: ${data.error || 'Unknown error'}`, { isError: true });
+          }
+        } else {
+          const errorText = await response.text();
+          console.error('Repair types API error:', response.status, errorText);
+          shopify?.toast?.show?.(`Failed to load repair types (${response.status})`, { isError: true });
+        }
+      } catch (error) {
+        console.error('Failed to load repair types:', error);
+        shopify?.toast?.show?.(`Failed to load repair types: ${error.message || 'Network error'}`, { isError: true });
+      } finally {
+        setLoadingRepairTypes(false);
+      }
+    };
+
+    fetchRepairTypes();
   }, []);
 
   // Fetch brands on mount
@@ -697,6 +740,9 @@ function Modal() {
           ? models.find(m => m.id === selectedModelId)?.name
           : modelOther.trim() || deviceInfo.model,
         serial: deviceInfo.serial,
+        repairType: selectedRepairTypeId && selectedRepairTypeId !== 'other'
+          ? repairTypes.find(rt => rt.id === selectedRepairTypeId)?.name
+          : repairTypeOther.trim() || deviceInfo.repairType,
         issueDescription: deviceInfo.issueDescription,
 
         // Financial data
@@ -1176,6 +1222,53 @@ function Modal() {
               onInput={(e) => setDeviceInfo({...deviceInfo, serial: e.target.value})}
               placeholder="Optional"
             />
+
+            {/* Repair Type Dropdown */}
+            {loadingRepairTypes ? (
+              <s-box padding="base">
+                <s-text tone="subdued">Loading repair types...</s-text>
+              </s-box>
+            ) : (
+              <s-stack direction="block" gap="tight">
+                <Dropdown
+                  label="Repair Type"
+                  value={selectedRepairTypeId}
+                  onChange={(value) => {
+                    setSelectedRepairTypeId(value);
+                    const selectedRepairType = repairTypes.find(rt => rt.id === value);
+                    if (selectedRepairType?.name === 'Other') {
+                      setRepairTypeOther('');
+                    } else {
+                      setRepairTypeOther('');
+                      setDeviceInfo({...deviceInfo, repairType: selectedRepairType?.name || ''});
+                    }
+                  }}
+                  options={[
+                    { value: '', label: 'Select Repair Type' },
+                    ...repairTypes.map(rt => ({
+                      value: rt.id,
+                      label: rt.name
+                    })),
+                    { value: 'other', label: 'Other' }
+                  ]}
+                  error={errors.repairType}
+                  placeholder="Select Repair Type"
+                />
+                {selectedRepairTypeId === 'other' && (
+                  <s-text-field
+                    label="Repair Type (Other)"
+                    value={repairTypeOther}
+                    onInput={(e) => {
+                      setRepairTypeOther(e.target.value);
+                      setDeviceInfo({...deviceInfo, repairType: e.target.value});
+                    }}
+                    placeholder="Enter repair type"
+                    error={errors.repairType}
+                  />
+                )}
+              </s-stack>
+            )}
+
             <s-text-area
               label="Issue Description"
               value={deviceInfo.issueDescription}
