@@ -971,29 +971,30 @@ function Modal() {
                 <s-text tone="critical">No device types available. Please check your connection.</s-text>
               </s-box>
             ) : (
-              <Dropdown
-                label="Device Type"
-                value={selectedDeviceTypeId}
-                onChange={(value) => {
-                  setSelectedDeviceTypeId(value);
-                  const selectedType = deviceTypes.find(dt => dt.id === value);
-                  if (selectedType?.name === 'Other') {
-                    setDeviceTypeOther('');
-                  } else {
-                    setDeviceTypeOther('');
-                    setDeviceInfo({...deviceInfo, type: selectedType?.name || ''});
-                  }
-                }}
-                options={[
-                  { value: '', label: 'Select Device Type' },
-                  ...deviceTypes.map(dt => ({
-                    value: dt.id,
-                    label: dt.name
-                  }))
-                ]}
-                error={errors.deviceType}
-                placeholder="Select Device Type"
-              />
+              <s-stack direction="block" gap="tight">
+                <Dropdown
+                  label="Device Type"
+                  value={selectedDeviceTypeId}
+                  onChange={(value) => {
+                    setSelectedDeviceTypeId(value);
+                    const selectedType = deviceTypes.find(dt => dt.id === value);
+                    if (selectedType?.name === 'Other') {
+                      setDeviceTypeOther('');
+                    } else {
+                      setDeviceTypeOther('');
+                      setDeviceInfo({...deviceInfo, type: selectedType?.name || ''});
+                    }
+                  }}
+                  options={[
+                    { value: '', label: 'Select Device Type' },
+                    ...deviceTypes.map(dt => ({
+                      value: dt.id,
+                      label: dt.name
+                    }))
+                  ]}
+                  error={errors.deviceType}
+                  placeholder="Select Device Type"
+                />
                 {selectedDeviceTypeId && deviceTypes.find(dt => dt.id === selectedDeviceTypeId)?.name === 'Other' && (
                   <s-text-field
                     label="Device Type (Other)"
@@ -1019,33 +1020,34 @@ function Modal() {
                 <s-text tone="critical">No brands available. Please check your connection.</s-text>
               </s-box>
             ) : (
-              <Dropdown
-                label="Brand"
-                value={selectedBrandId}
-                onChange={(value) => {
-                  setSelectedBrandId(value);
-                  const selectedBrand = brands.find(b => b.id === value);
-                  if (selectedBrand?.name === 'Other') {
-                    setBrandOther('');
-                  } else {
-                    setBrandOther('');
-                    setDeviceInfo({...deviceInfo, brand: selectedBrand?.name || ''});
-                  }
-                  // Reset model when brand changes
-                  setSelectedModelId('');
-                  setModelOther('');
-                  setModels([]);
-                }}
-                options={[
-                  { value: '', label: 'Select Brand' },
-                  ...brands.map(b => ({
-                    value: b.id,
-                    label: b.name
-                  }))
-                ]}
-                error={errors.deviceBrand}
-                placeholder="Select Brand"
-              />
+              <s-stack direction="block" gap="tight">
+                <Dropdown
+                  label="Brand"
+                  value={selectedBrandId}
+                  onChange={(value) => {
+                    setSelectedBrandId(value);
+                    const selectedBrand = brands.find(b => b.id === value);
+                    if (selectedBrand?.name === 'Other') {
+                      setBrandOther('');
+                    } else {
+                      setBrandOther('');
+                      setDeviceInfo({...deviceInfo, brand: selectedBrand?.name || ''});
+                    }
+                    // Reset model when brand changes
+                    setSelectedModelId('');
+                    setModelOther('');
+                    setModels([]);
+                  }}
+                  options={[
+                    { value: '', label: 'Select Brand' },
+                    ...brands.map(b => ({
+                      value: b.id,
+                      label: b.name
+                    }))
+                  ]}
+                  error={errors.deviceBrand}
+                  placeholder="Select Brand"
+                />
                 {selectedBrandId && brands.find(b => b.id === selectedBrandId)?.name === 'Other' && (
                   <s-text-field
                     label="Brand (Other)"
@@ -1071,30 +1073,31 @@ function Modal() {
                 <s-text tone="subdued">Loading models...</s-text>
               </s-box>
             ) : (
-              <Dropdown
-                label="Model"
-                value={selectedModelId}
-                onChange={(value) => {
-                  setSelectedModelId(value);
-                  const selectedModel = models.find(m => m.id === value);
-                  if (selectedModel?.name === 'Other') {
-                    setModelOther('');
-                  } else {
-                    setModelOther('');
-                    setDeviceInfo({...deviceInfo, model: selectedModel?.name || ''});
-                  }
-                }}
-                options={[
-                  { value: '', label: 'Select Model' },
-                  ...models.map(m => ({
-                    value: m.id,
-                    label: m.name
-                  })),
-                  { value: 'other', label: 'Other' }
-                ]}
-                error={errors.deviceModel}
-                placeholder="Select Model"
-              />
+              <s-stack direction="block" gap="tight">
+                <Dropdown
+                  label="Model"
+                  value={selectedModelId}
+                  onChange={(value) => {
+                    setSelectedModelId(value);
+                    const selectedModel = models.find(m => m.id === value);
+                    if (selectedModel?.name === 'Other') {
+                      setModelOther('');
+                    } else {
+                      setModelOther('');
+                      setDeviceInfo({...deviceInfo, model: selectedModel?.name || ''});
+                    }
+                  }}
+                  options={[
+                    { value: '', label: 'Select Model' },
+                    ...models.map(m => ({
+                      value: m.id,
+                      label: m.name
+                    })),
+                    { value: 'other', label: 'Other' }
+                  ]}
+                  error={errors.deviceModel}
+                  placeholder="Select Model"
+                />
                 {selectedModelId === 'other' && (
                   <s-text-field
                     label="Model (Other)"
