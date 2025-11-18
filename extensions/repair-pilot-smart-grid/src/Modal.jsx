@@ -130,7 +130,11 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
                   <s-search-field
                     label="Search"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onInput={(e) => {
+                      // Real-time filtering as user types
+                      const newValue = e.currentTarget?.value || e.target?.value || '';
+                      setSearchTerm(newValue);
+                    }}
                     placeholder="Type to search..."
                   />
                 </s-box>
