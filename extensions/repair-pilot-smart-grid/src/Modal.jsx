@@ -126,7 +126,7 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
             <s-stack direction="block" gap="none">
               {/* Search field for large lists */}
               {options.length > 10 && (
-                <s-box padding="base" borderWidth="base" borderBottom="base">
+                <s-box padding="base" borderWidth="base" borderBottom="base" background="base">
                   <s-search-field
                     label="Search"
                     value={searchTerm}
@@ -141,8 +141,9 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
               )}
               
               {/* Scrollable options list - fixed height with scrollbar */}
-              <s-scroll-box blockSize="250px" maxBlockSize="250px" background="base">
-                <s-stack direction="block" gap="none">
+              <s-box background="base">
+                <s-scroll-box blockSize="250px" maxBlockSize="250px">
+                  <s-stack direction="block" gap="none">
                   {visibleOptions.length === 0 ? (
                     <s-box padding="base">
                       <s-text tone="subdued" align="center">No matches found</s-text>
@@ -187,8 +188,9 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
                       )}
                     </>
                   )}
-                </s-stack>
-              </s-scroll-box>
+                  </s-stack>
+                </s-scroll-box>
+              </s-box>
             </s-stack>
           </s-box>
         )}
