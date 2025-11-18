@@ -42,6 +42,7 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
   const [searchTerm, setSearchTerm] = useState('');
   const selectedOption = options.find(opt => opt.value === value);
   const displayText = selectedOption ? selectedOption.label : placeholder;
+  const displayTone = selectedOption ? 'base' : 'subdued';
 
   // Filter options based on search term
   const filteredOptions = searchTerm
@@ -88,76 +89,108 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
   return (
     <s-stack direction="block" gap="tight">
       {label && <s-text type="strong">{label}</s-text>}
-      <s-box>
+      <s-box position="relative">
+        {/* Dropdown trigger button - styled like a select field */}
         <s-button
-          variant="secondary"
+          variant={isOpen ? 'primary' : 'secondary'}
           onClick={(e) => {
             e.stopPropagation();
             setIsOpen(!isOpen);
           }}
           fullWidth
         >
-          <s-stack direction="inline" gap="tight" alignment="spaceBetween">
-            <s-text>{displayText}</s-text>
-            <s-text>{isOpen ? '▲' : '▼'}</s-text>
+          <s-stack direction="inline" gap="base" alignment="spaceBetween">
+            <s-text tone={displayTone} align="start">
+              {displayText}
+            </s-text>
+            <s-text tone="subdued">{isOpen ? '▲' : '▼'}</s-text>
           </s-stack>
         </s-button>
         
+        {/* Dropdown menu - appears below the button */}
         {isOpen && (
           <s-box
             background="base"
             borderWidth="base"
+            border="base"
             cornerRadius="base"
-            padding="base"
+            padding="none"
             marginTop="tight"
+            position="absolute"
+            style={{
+              width: '100%',
+              zIndex: 1000,
+              boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+            }}
           >
-            {/* Use s-search-field for search (recommended by Shopify AI) */}
-            {options.length > 10 && (
-              <s-search-field
-                label="Search"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Type to search..."
-              />
-            )}
-            
-            <s-scroll-box>
-              <s-stack direction="block" gap="none">
-                {visibleOptions.length === 0 ? (
-                  <s-box padding="base">
-                    <s-text tone="subdued">No matches found</s-text>
-                  </s-box>
-                ) : (
-                  <>
-                    {visibleOptions.map((option) => (
-                      <s-button
-                        key={option.value}
-                        variant={value === option.value ? 'primary' : 'secondary'}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSelect(option.value);
-                        }}
-                        fullWidth
-                      >
-                        <s-text align="start">{option.label}</s-text>
-                      </s-button>
-                    ))}
-                    {hasMoreResults && (
-                      <s-box padding="base">
-                        <s-text tone="subdued">
-                          Showing first {MAX_VISIBLE_OPTIONS} of {filteredOptions.length} results. Refine your search to see more.
-                        </s-text>
-                      </s-box>
-                    )}
-                  </>
-                )}
-              </s-stack>
-            </s-scroll-box>
+            <s-stack direction="block" gap="none">
+              {/* Search field for large lists */}
+              {options.length > 10 && (
+                <s-box padding="base" borderWidth="base" borderBottom="base">
+                  <s-search-field
+                    label="Search"
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    placeholder="Type to search..."
+                  />
+                </s-box>
+              )}
+              
+              {/* Scrollable options list */}
+              <s-scroll-box maxHeight="250px">
+                <s-stack direction="block" gap="none">
+                  {visibleOptions.length === 0 ? (
+                    <s-box padding="base">
+                      <s-text tone="subdued" align="center">No matches found</s-text>
+                    </s-box>
+                  ) : (
+                    <>
+                      {visibleOptions.map((option, index) => (
+                        <s-box
+                          key={option.value}
+                          padding="base"
+                          background={value === option.value ? 'highlight' : 'base'}
+                          borderWidth={index > 0 ? 'base' : 'none'}
+                          borderTop={index > 0 ? 'base' : 'none'}
+                        >
+                          <s-button
+                            variant="plain"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleSelect(option.value);
+                            }}
+                            fullWidth
+                          >
+                            <s-text 
+                              align="start" 
+                              tone={value === option.value ? 'base' : 'base'}
+                              type={value === option.value ? 'strong' : 'body'}
+                            >
+                              {option.label}
+                            </s-text>
+                          </s-button>
+                        </s-box>
+                      ))}
+                      {hasMoreResults && (
+                        <s-box padding="base" background="subdued">
+                          <s-text tone="subdued" type="small" align="center">
+                            Showing first {MAX_VISIBLE_OPTIONS} of {filteredOptions.length} results
+                          </s-text>
+                          <s-text tone="subdued" type="small" align="center">
+                            Refine your search to see more
+                          </s-text>
+                        </s-box>
+                      )}
+                    </>
+                  )}
+                </s-stack>
+              </s-scroll-box>
+            </s-stack>
           </s-box>
         )}
       </s-box>
       {error && (
-        <s-text tone="critical">{error}</s-text>
+        <s-text tone="critical" type="small">{error}</s-text>
       )}
     </s-stack>
   );
