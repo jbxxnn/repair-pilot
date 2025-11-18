@@ -70,11 +70,12 @@ export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response>
   }
   
   try {
-    // Test database connection
+    // Test database connection using Prisma
     console.log(`[TICKETS:${requestId}] Testing database connection...`);
     try {
       const startTime = Date.now();
-      await prisma.$queryRaw`SELECT 1 as test`;
+      // Use Prisma's count query as a lightweight connection test
+      await prisma.ticket.count();
       const duration = Date.now() - startTime;
       console.log(`[TICKETS:${requestId}] ✅ Database connection verified (${duration}ms)`);
     } catch (dbError) {
