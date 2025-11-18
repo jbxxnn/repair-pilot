@@ -35,6 +35,115 @@ const createInitialFinancialInfo = () => ({
   depositAmount: '',
 });
 
+// Custom Dropdown Component for POS Extensions
+function Dropdown({ label, value, options, onChange, error, placeholder = "Select..." }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const selectedOption = options.find(opt => opt.value === value);
+  const displayText = selectedOption ? selectedOption.label : placeholder;
+
+  // Filter options based on search term
+  const filteredOptions = searchTerm
+    ? options.filter(opt => 
+        opt.label.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+    : options;
+
+  const handleSelect = (optionValue) => {
+    onChange(optionValue);
+    setIsOpen(false);
+    setSearchTerm('');
+  };
+
+  // Close dropdown when clicking outside (handled by modal overlay)
+  useEffect(() => {
+    if (!isOpen) return;
+    
+    const handleClickOutside = () => {
+      setIsOpen(false);
+      setSearchTerm('');
+    };
+
+    // Use a small delay to avoid immediate close on open
+    const timeoutId = setTimeout(() => {
+      document.addEventListener('click', handleClickOutside);
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      document.removeEventListener('click', handleClickOutside);
+    };
+  }, [isOpen]);
+
+  return (
+    <s-stack direction="block" gap="tight">
+      {label && <s-text type="strong">{label}</s-text>}
+      <s-box>
+        <s-button
+          variant="secondary"
+          onClick={(e) => {
+            e.stopPropagation();
+            setIsOpen(!isOpen);
+          }}
+          fullWidth
+        >
+          <s-stack direction="inline" gap="tight" alignment="spaceBetween">
+            <s-text>{displayText}</s-text>
+            <s-text>{isOpen ? '▲' : '▼'}</s-text>
+          </s-stack>
+        </s-button>
+        
+        {isOpen && (
+          <s-box
+            background="base"
+            borderWidth="base"
+            cornerRadius="base"
+            padding="base"
+            marginTop="tight"
+          >
+            {/* Search field for large lists */}
+            {options.length > 10 && (
+              <s-text-field
+                label="Search"
+                value={searchTerm}
+                onInput={(e) => setSearchTerm(e.target.value)}
+                placeholder="Type to search..."
+              />
+            )}
+            
+            <s-scroll-box maxHeight="300px">
+              <s-stack direction="block" gap="none">
+                {filteredOptions.length === 0 ? (
+                  <s-box padding="base">
+                    <s-text tone="subdued">No matches found</s-text>
+                  </s-box>
+                ) : (
+                  filteredOptions.map((option) => (
+                    <s-button
+                      key={option.value}
+                      variant={value === option.value ? 'primary' : 'secondary'}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleSelect(option.value);
+                      }}
+                      fullWidth
+                    >
+                      <s-text align="start">{option.label}</s-text>
+                    </s-button>
+                  ))
+                )}
+              </s-stack>
+            </s-scroll-box>
+          </s-box>
+        )}
+      </s-box>
+      {error && (
+        <s-text tone="critical">{error}</s-text>
+      )}
+    </s-stack>
+  );
+}
+
 function Modal() {
   // Customer state
   const [customerMode, setCustomerMode] = useState('search'); // 'search' or 'create'
@@ -862,32 +971,29 @@ function Modal() {
                 <s-text tone="critical">No device types available. Please check your connection.</s-text>
               </s-box>
             ) : (
-              <s-stack direction="block" gap="tight">
-                <s-text type="strong">Device Type</s-text>
-                <s-choice-list
-                  value={selectedDeviceTypeId}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    setSelectedDeviceTypeId(value);
-                    const selectedType = deviceTypes.find(dt => dt.id === value);
-                    if (selectedType?.name === 'Other') {
-                      setDeviceTypeOther('');
-                    } else {
-                      setDeviceTypeOther('');
-                      setDeviceInfo({...deviceInfo, type: selectedType?.name || ''});
-                    }
-                  }}
-                >
-                  <s-choice value="" id="device-type-empty">Select Device Type</s-choice>
-                  {deviceTypes.map(dt => (
-                    <s-choice key={dt.id} value={dt.id} id={`device-type-${dt.id}`}>
-                      {dt.name}
-                    </s-choice>
-                  ))}
-                </s-choice-list>
-                {errors.deviceType && (
-                  <s-text tone="critical">{errors.deviceType}</s-text>
-                )}
+              <Dropdown
+                label="Device Type"
+                value={selectedDeviceTypeId}
+                onChange={(value) => {
+                  setSelectedDeviceTypeId(value);
+                  const selectedType = deviceTypes.find(dt => dt.id === value);
+                  if (selectedType?.name === 'Other') {
+                    setDeviceTypeOther('');
+                  } else {
+                    setDeviceTypeOther('');
+                    setDeviceInfo({...deviceInfo, type: selectedType?.name || ''});
+                  }
+                }}
+                options={[
+                  { value: '', label: 'Select Device Type' },
+                  ...deviceTypes.map(dt => ({
+                    value: dt.id,
+                    label: dt.name
+                  }))
+                ]}
+                error={errors.deviceType}
+                placeholder="Select Device Type"
+              />
                 {selectedDeviceTypeId && deviceTypes.find(dt => dt.id === selectedDeviceTypeId)?.name === 'Other' && (
                   <s-text-field
                     label="Device Type (Other)"
@@ -913,36 +1019,33 @@ function Modal() {
                 <s-text tone="critical">No brands available. Please check your connection.</s-text>
               </s-box>
             ) : (
-              <s-stack direction="block" gap="tight">
-                <s-text type="strong">Brand</s-text>
-                <s-choice-list
-                  value={selectedBrandId}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    setSelectedBrandId(value);
-                    const selectedBrand = brands.find(b => b.id === value);
-                    if (selectedBrand?.name === 'Other') {
-                      setBrandOther('');
-                    } else {
-                      setBrandOther('');
-                      setDeviceInfo({...deviceInfo, brand: selectedBrand?.name || ''});
-                    }
-                    // Reset model when brand changes
-                    setSelectedModelId('');
-                    setModelOther('');
-                    setModels([]);
-                  }}
-                >
-                  <s-choice value="" id="brand-empty">Select Brand</s-choice>
-                  {brands.map(b => (
-                    <s-choice key={b.id} value={b.id} id={`brand-${b.id}`}>
-                      {b.name}
-                    </s-choice>
-                  ))}
-                </s-choice-list>
-                {errors.deviceBrand && (
-                  <s-text tone="critical">{errors.deviceBrand}</s-text>
-                )}
+              <Dropdown
+                label="Brand"
+                value={selectedBrandId}
+                onChange={(value) => {
+                  setSelectedBrandId(value);
+                  const selectedBrand = brands.find(b => b.id === value);
+                  if (selectedBrand?.name === 'Other') {
+                    setBrandOther('');
+                  } else {
+                    setBrandOther('');
+                    setDeviceInfo({...deviceInfo, brand: selectedBrand?.name || ''});
+                  }
+                  // Reset model when brand changes
+                  setSelectedModelId('');
+                  setModelOther('');
+                  setModels([]);
+                }}
+                options={[
+                  { value: '', label: 'Select Brand' },
+                  ...brands.map(b => ({
+                    value: b.id,
+                    label: b.name
+                  }))
+                ]}
+                error={errors.deviceBrand}
+                placeholder="Select Brand"
+              />
                 {selectedBrandId && brands.find(b => b.id === selectedBrandId)?.name === 'Other' && (
                   <s-text-field
                     label="Brand (Other)"
@@ -968,33 +1071,30 @@ function Modal() {
                 <s-text tone="subdued">Loading models...</s-text>
               </s-box>
             ) : (
-              <s-stack direction="block" gap="tight">
-                <s-text type="strong">Model</s-text>
-                <s-choice-list
-                  value={selectedModelId}
-                  onChange={(e) => {
-                    const value = e.currentTarget.value;
-                    setSelectedModelId(value);
-                    const selectedModel = models.find(m => m.id === value);
-                    if (selectedModel?.name === 'Other') {
-                      setModelOther('');
-                    } else {
-                      setModelOther('');
-                      setDeviceInfo({...deviceInfo, model: selectedModel?.name || ''});
-                    }
-                  }}
-                >
-                  <s-choice value="" id="model-empty">Select Model</s-choice>
-                  {models.map(m => (
-                    <s-choice key={m.id} value={m.id} id={`model-${m.id}`}>
-                      {m.name}
-                    </s-choice>
-                  ))}
-                  <s-choice value="other" id="model-other">Other</s-choice>
-                </s-choice-list>
-                {errors.deviceModel && (
-                  <s-text tone="critical">{errors.deviceModel}</s-text>
-                )}
+              <Dropdown
+                label="Model"
+                value={selectedModelId}
+                onChange={(value) => {
+                  setSelectedModelId(value);
+                  const selectedModel = models.find(m => m.id === value);
+                  if (selectedModel?.name === 'Other') {
+                    setModelOther('');
+                  } else {
+                    setModelOther('');
+                    setDeviceInfo({...deviceInfo, model: selectedModel?.name || ''});
+                  }
+                }}
+                options={[
+                  { value: '', label: 'Select Model' },
+                  ...models.map(m => ({
+                    value: m.id,
+                    label: m.name
+                  })),
+                  { value: 'other', label: 'Other' }
+                ]}
+                error={errors.deviceModel}
+                placeholder="Select Model"
+              />
                 {selectedModelId === 'other' && (
                   <s-text-field
                     label="Model (Other)"
@@ -1109,20 +1209,19 @@ function Modal() {
                 </s-text>
               </s-box>
             ) : (
-              <s-stack direction="block" gap="tight">
-                <s-text type="strong">Assign Technician</s-text>
-                <s-choice-list
-                  value={selectedTechnicianId}
-                  onChange={(e) => setSelectedTechnicianId(e.currentTarget.value)}
-                >
-                  <s-choice value="" id="tech-empty">Unassigned</s-choice>
-                  {technicians.map(tech => (
-                    <s-choice key={tech.id} value={tech.id} id={`tech-${tech.id}`}>
-                      {tech.name}
-                    </s-choice>
-                  ))}
-                </s-choice-list>
-              </s-stack>
+              <Dropdown
+                label="Assign Technician"
+                value={selectedTechnicianId}
+                onChange={(value) => setSelectedTechnicianId(value)}
+                options={[
+                  { value: '', label: 'Unassigned' },
+                  ...technicians.map(tech => ({
+                    value: tech.id,
+                    label: tech.name
+                  }))
+                ]}
+                placeholder="Unassigned"
+              />
             )}
           </s-stack>
         </s-section>
