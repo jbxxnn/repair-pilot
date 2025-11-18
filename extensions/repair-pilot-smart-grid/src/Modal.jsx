@@ -159,17 +159,16 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
                           borderTop={index > 0 ? 'base' : 'none'}
                         >
                           <s-button
-                            variant="plain"
+                            variant="secondary"
+                            color="subdued"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleSelect(option.value);
                             }}
-                            fullWidth
                           >
                             <s-text 
                               align="start" 
-                              tone={value === option.value ? 'base' : 'base'}
-                              type={value === option.value ? 'strong' : 'body'}
+                              type='body'
                             >
                               {option.label}
                             </s-text>
