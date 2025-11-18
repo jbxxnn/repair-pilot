@@ -109,7 +109,7 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
         
         {/* Dropdown menu - appears below the button */}
         {isOpen && (
-          <s-box padding="none">
+          <s-box padding="none" cornerRadius="base">
             <s-stack direction="block" gap="none">
               {/* Search field for large lists */}
               {options.length > 10 && (
@@ -137,20 +137,21 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
                     ) : (
                       <>
                         {visibleOptions.map((option) => (
-                          <s-button
-                            key={option.value}
-                            variant="secondary"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleSelect(option.value);
-                            }}
-                          >
-                            <s-text 
-                              type={value === option.value ? 'strong' : undefined}
+                          <s-box key={option.value} padding="none">
+                            <s-button
+                              variant="secondary"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleSelect(option.value);
+                              }}
                             >
-                              {option.label}
-                            </s-text>
-                          </s-button>
+                              <s-text 
+                                type={value === option.value ? 'strong' : undefined}
+                              >
+                                {option.label}
+                              </s-text>
+                            </s-button>
+                          </s-box>
                         ))}
                         {hasMoreResults && (
                           <s-box padding="base">
