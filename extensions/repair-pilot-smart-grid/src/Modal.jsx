@@ -136,8 +136,8 @@ function Dropdown({ label, value, options, onChange, error, placeholder = "Selec
                 </s-box>
               )}
               
-              {/* Scrollable options list */}
-              <s-scroll-box maxHeight="250px">
+              {/* Scrollable options list - fixed height with scrollbar */}
+              <s-scroll-box blockSize="250px" maxBlockSize="250px">
                 <s-stack direction="block" gap="none">
                   {visibleOptions.length === 0 ? (
                     <s-box padding="base">
