@@ -48,6 +48,7 @@ model Ticket {
   updatedAt        DateTime    @updatedAt @map("updated_at")
   auditLogs        AuditLog[]
   partsUsed        PartsUsed[]
+  quoteItems       QuoteItem[]
   shop             Shop        @relation(fields: [shopId], references: [id], onDelete: Cascade)
 
   @@index([customerId], map: "idx_tickets_customer")
@@ -145,4 +146,19 @@ model RepairType {
   updatedAt DateTime @updatedAt @map("updated_at")
 
   @@map("repair_types")
+}
+
+model QuoteItem {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  ticketId    String   @map("ticket_id") @db.Uuid
+  type        String   // 'diagnostic', 'parts', 'labor', 'additional'
+  description String?  // Required for 'additional', optional for others
+  amount      Decimal  @db.Decimal(10, 2)
+  displayOrder Int     @default(0) @map("display_order")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId], map: "idx_quote_items_ticket")
+  @@map("quote_items")
 }

@@ -29,6 +29,11 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
       id: ticketId,
       shopDomain: session.shop,
     },
+    include: {
+      quoteItems: {
+        orderBy: { displayOrder: 'asc' },
+      },
+    },
   });
 
   if (!ticket) {
@@ -78,6 +83,13 @@ export const loader = async ({ request, params }: LoaderFunctionArgs) => {
     depositCollectedAmount: ticket.depositCollectedAmount ? ticket.depositCollectedAmount.toNumber() : null,
     technicianId: ticket.technicianId,
     technician,
+    quoteItems: ticket.quoteItems?.map(item => ({
+      id: item.id,
+      type: item.type,
+      description: item.description,
+      amount: item.amount.toNumber(),
+      displayOrder: item.displayOrder,
+    })) || [],
     createdAt: ticket.createdAt,
     updatedAt: ticket.updatedAt,
   };
@@ -983,6 +995,40 @@ export default function TicketDetail() {
 
           <section style={{ marginBottom: "2rem" }}>
             <h3 style={{ fontSize: "18px", fontWeight: "600", marginBottom: "1rem", color: "#111827" }}>Financial Information</h3>
+            
+            {/* Itemized Quote Breakdown */}
+            {currentTicket.quoteItems && currentTicket.quoteItems.length > 0 && (
+              <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+                <h4 style={{ fontSize: "14px", fontWeight: "600", marginBottom: "0.75rem", color: "#374151" }}>Itemized Pre-Quote</h4>
+                <div style={{ display: "flex", flexDirection: "column", gap: "0.5rem" }}>
+                  {currentTicket.quoteItems.map((item) => (
+                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.5rem 0", borderBottom: "1px solid #e5e7eb" }}>
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: "500", color: "#111827" }}>
+                          {item.type === 'diagnostic' ? 'Diagnostic/Bench Fee' :
+                           item.type === 'parts' ? 'Estimated Parts' :
+                           item.type === 'labor' ? 'Estimated Labor' :
+                           item.description || 'Additional Item'}
+                        </div>
+                        {item.type === 'additional' && item.description && (
+                          <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "0.25rem" }}>{item.description}</div>
+                        )}
+                      </div>
+                      <div style={{ fontSize: "14px", fontWeight: "600", color: "#059669" }}>
+                        {formatCurrency(item.amount)}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.5rem", marginTop: "0.5rem", borderTop: "2px solid #d1d5db" }}>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#111827" }}>Estimated Total</div>
+                    <div style={{ fontSize: "16px", fontWeight: "700", color: "#059669" }}>
+                      {formatCurrency(currentTicket.quotedAmount || 0)}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+            
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: "1rem" }}>
               <div style={{ padding: "1rem", background: "#f0fdf4", borderRadius: "8px", border: "1px solid #86efac" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Quoted Amount</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#059669", marginTop: "0.5rem" }}>{currentTicket.quotedAmount ? formatCurrency(currentTicket.quotedAmount) : "N/A"}</div></div>
               <div style={{ padding: "1rem", background: "#ecfdf5", borderRadius: "8px", border: "1px solid #6ee7b7" }}><label style={{ fontSize: "12px", color: "#6b7280", fontWeight: "500" }}>Deposit</label><div style={{ fontSize: "18px", fontWeight: "600", color: "#059669", marginTop: "0.5rem" }}>{formatCurrency(currentTicket.depositAmount)}</div></div>

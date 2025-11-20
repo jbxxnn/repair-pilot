@@ -33,6 +33,13 @@ export interface Ticket {
     email: string | null;
     phone: string | null;
   } | null;
+  quoteItems?: Array<{
+    id: string;
+    type: string;
+    description: string | null;
+    amount: number;
+    displayOrder: number;
+  }>;
   createdAt: Date;
   updatedAt: Date;
 }

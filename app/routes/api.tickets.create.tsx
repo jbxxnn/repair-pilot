@@ -24,9 +24,16 @@ export interface CreateTicketRequest {
   repairType?: string;
   issueDescription?: string;
   
-  // Financial data
+  // Financial data (legacy - for backward compatibility)
   quotedAmount?: number;
-  depositAmount: number;
+  depositAmount?: number;
+  
+  // Itemized quote data (new)
+  quoteItems?: Array<{
+    type: 'diagnostic' | 'parts' | 'labor' | 'additional';
+    description: string;
+    amount: number;
+  }>;
   
   // Optional
   technicianId?: string;
@@ -92,8 +99,31 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
     const body = await request.json() as CreateTicketRequest;
     const paymentMode = body.paymentMode === 'pos' ? 'pos' : 'invoice';
     
-    // Validate required fields
-    if (!body.depositAmount || !isValidAmount(body.depositAmount)) {
+    // Calculate financial amounts from itemized quote or legacy fields
+    let quotedAmount = 0;
+    let depositAmount = 0;
+    const depositPercentage = 0.20; // 20% for now
+    
+    if (body.quoteItems && body.quoteItems.length > 0) {
+      // Calculate from itemized quote
+      quotedAmount = body.quoteItems.reduce((sum, item) => sum + (item.amount || 0), 0);
+      depositAmount = quotedAmount * depositPercentage;
+    } else if (body.quotedAmount !== undefined && body.depositAmount !== undefined) {
+      // Use legacy fields
+      quotedAmount = body.quotedAmount || 0;
+      depositAmount = body.depositAmount;
+    } else {
+      return new Response(JSON.stringify({ 
+        success: false, 
+        error: "Either quoteItems or quotedAmount/depositAmount is required" 
+      }), { 
+        status: 400, 
+        headers: { "Content-Type": "application/json" } 
+      });
+    }
+    
+    // Validate amounts
+    if (!isValidAmount(depositAmount) || depositAmount <= 0) {
       return new Response(JSON.stringify({ 
         success: false, 
         error: "Valid deposit amount is required" 
@@ -162,8 +192,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
     }
 
     // Calculate remaining amount
-    const quotedAmount = body.quotedAmount || 0;
-    const remainingAmount = calculateRemainingAmount(quotedAmount, body.depositAmount);
+    const remainingAmount = calculateRemainingAmount(quotedAmount, depositAmount);
 
     // Create ticket in database
     const ticket = await prisma.ticket.create({
@@ -178,11 +207,22 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
         serial: body.serial,
         repairType: body.repairType,
         issueDescription: body.issueDescription,
-                  photos: [], // Photos will be added later via admin UI
+        photos: [], // Photos will be added later via admin UI
         quotedAmount: quotedAmount,
-        depositAmount: body.depositAmount,
+        depositAmount: depositAmount,
         remainingAmount: remainingAmount,
         technicianId: body.technicianId,
+        quoteItems: body.quoteItems ? {
+          create: body.quoteItems.map((item, index) => ({
+            type: item.type,
+            description: item.description || '',
+            amount: item.amount,
+            displayOrder: index,
+          }))
+        } : undefined,
+      },
+      include: {
+        quoteItems: true,
       }
     });
 
@@ -211,7 +251,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
           lineItems: [{
             title: `Repair Deposit - Ticket #${ticket.id.slice(-8)}`,
             quantity: 1,
-            price: body.depositAmount.toString(),
+            price: depositAmount.toString(),
           }],
           note: `Repair ticket deposit. Ticket ID: ${ticket.id}`,
         });
@@ -255,7 +295,7 @@ export const action = async ({ request }: ActionFunctionArgs): Promise<Response>
       intakeInvoiceUrl: intakeInvoiceUrl,
       customerId: customerId,
       paymentMode,
-      depositAmount: body.depositAmount,
+      depositAmount: depositAmount,
     };
 
     return new Response(JSON.stringify(response), { 

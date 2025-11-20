@@ -32,8 +32,10 @@ const createInitialDeviceInfo = () => ({
 });
 
 const createInitialFinancialInfo = () => ({
-  quotedAmount: '',
-  depositAmount: '',
+  diagnostic: '',
+  parts: '',
+  labor: '',
+  additionalItems: [], // Array of { description: '', amount: '' }
 });
 
 // Custom Dropdown Component for POS Extensions
@@ -637,9 +639,15 @@ function Modal() {
       newErrors.deviceModel = 'Please enter model name';
     }
 
-    // Financial validation
-    if (!financialInfo.depositAmount || parseFloat(financialInfo.depositAmount) <= 0) {
-      newErrors.depositAmount = 'Deposit amount is required and must be greater than 0';
+    // Financial validation - at least one item must have a value
+    const diagnostic = parseFloat(financialInfo.diagnostic || 0);
+    const parts = parseFloat(financialInfo.parts || 0);
+    const labor = parseFloat(financialInfo.labor || 0);
+    const additionalTotal = financialInfo.additionalItems.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+    const total = diagnostic + parts + labor + additionalTotal;
+    
+    if (total <= 0) {
+      newErrors.financial = 'At least one quote item must have a value greater than 0';
     }
 
     setErrors(newErrors);
@@ -745,15 +753,46 @@ function Modal() {
           : repairTypeOther.trim() || deviceInfo.repairType,
         issueDescription: deviceInfo.issueDescription,
 
-        // Financial data
-        quotedAmount: parseFloat(financialInfo.quotedAmount) || 0,
-        depositAmount: parseFloat(financialInfo.depositAmount),
+        // Financial data - calculate from itemized quote
+        quoteItems: [
+          ...(financialInfo.diagnostic ? [{
+            type: 'diagnostic',
+            description: 'Diagnostic/Bench Fee',
+            amount: parseFloat(financialInfo.diagnostic) || 0
+          }] : []),
+          ...(financialInfo.parts ? [{
+            type: 'parts',
+            description: 'Estimated Parts',
+            amount: parseFloat(financialInfo.parts) || 0
+          }] : []),
+          ...(financialInfo.labor ? [{
+            type: 'labor',
+            description: 'Estimated Labor',
+            amount: parseFloat(financialInfo.labor) || 0
+          }] : []),
+          ...financialInfo.additionalItems
+            .filter(item => item.description.trim() && parseFloat(item.amount || 0) > 0)
+            .map(item => ({
+              type: 'additional',
+              description: item.description.trim(),
+              amount: parseFloat(item.amount) || 0
+            }))
+        ],
 
         // Technician assignment
         technicianId: selectedTechnicianId || undefined,
 
         paymentMode,
       };
+
+      // Calculate deposit amount (20% of total) for POS cart
+      const diagnostic = parseFloat(financialInfo.diagnostic || 0);
+      const parts = parseFloat(financialInfo.parts || 0);
+      const labor = parseFloat(financialInfo.labor || 0);
+      const additionalTotal = financialInfo.additionalItems.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+      const estimatedTotal = diagnostic + parts + labor + additionalTotal;
+      const depositPercentage = 0.20; // 20% for now
+      const calculatedDepositAmount = estimatedTotal * depositPercentage;
 
       console.log("Ticket data:", ticketData);
       
@@ -794,7 +833,7 @@ function Modal() {
           posCartStatus = await addDepositToPosCart({
             ticketId: result.ticketId,
             ticketSuffix,
-            depositAmount: result.depositAmount || financialInfo.depositAmount,
+            depositAmount: result.depositAmount || calculatedDepositAmount,
           });
         }
 
@@ -824,7 +863,7 @@ function Modal() {
           intakeInvoiceUrl: result.intakeInvoiceUrl,
           draftOrderId: result.draftOrderId,
           paymentMode,
-          depositAmount: result.depositAmount || parseFloat(financialInfo.depositAmount),
+          depositAmount: result.depositAmount || calculatedDepositAmount,
           posCartStatus,
         });
       } else {
@@ -1280,48 +1319,136 @@ function Modal() {
         </s-section>
 
 
-        {/* Financial Section */}
+        {/* Financial Section - Itemized Pre-Quote */}
         <s-section heading="Payment Information">
           <s-stack direction="block" gap="base">
+            {/* Diagnostic/Bench Fee */}
             <s-stack direction="block" gap="tight">
-              <s-text type="strong">Total Repair Cost (Quote)</s-text>
-              <s-text type="small" tone="subdued">Enter the total estimated cost for this repair</s-text>
+              <s-text type="strong">Diagnostic/Bench Fee</s-text>
+              <s-text type="small" tone="subdued">Initial diagnostic fee</s-text>
               <s-number-field
-                value={financialInfo.quotedAmount}
-                onInput={(e) => setFinancialInfo({...financialInfo, quotedAmount: e.target.value})}
-                placeholder="150.00"
+                value={financialInfo.diagnostic}
+                onInput={(e) => setFinancialInfo({...financialInfo, diagnostic: e.target.value})}
+                placeholder="0.00"
                 inputMode="decimal"
                 controls="stepper"
               />
             </s-stack>
+
+            {/* Estimated Parts */}
             <s-stack direction="block" gap="tight">
-              <s-text type="strong">Deposit Amount (Required)</s-text>
-              <s-text type="small" tone="subdued">Amount customer pays upfront</s-text>
+              <s-text type="strong">Estimated Parts</s-text>
+              <s-text type="small" tone="subdued">Estimated cost of parts needed</s-text>
               <s-number-field
-                value={financialInfo.depositAmount}
-                onInput={(e) => setFinancialInfo({...financialInfo, depositAmount: e.target.value})}
-                placeholder="50.00"
-                error={errors.depositAmount}
-                required
+                value={financialInfo.parts}
+                onInput={(e) => setFinancialInfo({...financialInfo, parts: e.target.value})}
+                placeholder="0.00"
                 inputMode="decimal"
                 controls="stepper"
               />
             </s-stack>
-            {financialInfo.quotedAmount && financialInfo.depositAmount && (
-              <s-box background="highlight" padding="base" border="subdued" cornerRadius="medium">
-                <s-stack direction="block" gap="none">
-                  <s-text tone="subdued" type="small">
-                    Summary
-                  </s-text>
-                </s-stack>
-                <s-stack direction="block" gap="none">
-                  <s-text type="small">Total Quote: ${parseFloat(financialInfo.quotedAmount || 0).toFixed(2)}</s-text>
-                  <s-text type="small">Deposit Paid: ${parseFloat(financialInfo.depositAmount || 0).toFixed(2)}</s-text>
-                  <s-text type="strong" tone="critical">
-                    Remaining Balance: ${(parseFloat(financialInfo.quotedAmount || 0) - parseFloat(financialInfo.depositAmount || 0)).toFixed(2)}
-                  </s-text>
-                </s-stack>
-              </s-box>
+
+            {/* Estimated Labor */}
+            <s-stack direction="block" gap="tight">
+              <s-text type="strong">Estimated Labor</s-text>
+              <s-text type="small" tone="subdued">Estimated labor cost</s-text>
+              <s-number-field
+                value={financialInfo.labor}
+                onInput={(e) => setFinancialInfo({...financialInfo, labor: e.target.value})}
+                placeholder="0.00"
+                inputMode="decimal"
+                controls="stepper"
+              />
+            </s-stack>
+
+            {/* Additional Line Items */}
+            <s-stack direction="block" gap="tight">
+              <s-text type="strong">Additional Line Items</s-text>
+              <s-text type="small" tone="subdued">Add any additional charges</s-text>
+              {financialInfo.additionalItems.map((item, index) => (
+                <s-box key={index} padding="base" border="base" cornerRadius="base">
+                  <s-stack direction="block" gap="tight">
+                    <s-text-field
+                      label="Description"
+                      value={item.description}
+                      onInput={(e) => {
+                        const updated = [...financialInfo.additionalItems];
+                        updated[index].description = e.target.value;
+                        setFinancialInfo({...financialInfo, additionalItems: updated});
+                      }}
+                      placeholder="Item description"
+                    />
+                    <s-number-field
+                      label="Amount"
+                      value={item.amount}
+                      onInput={(e) => {
+                        const updated = [...financialInfo.additionalItems];
+                        updated[index].amount = e.target.value;
+                        setFinancialInfo({...financialInfo, additionalItems: updated});
+                      }}
+                      placeholder="0.00"
+                      inputMode="decimal"
+                      controls="stepper"
+                    />
+                    <s-button
+                      variant="secondary"
+                      onClick={() => {
+                        const updated = financialInfo.additionalItems.filter((_, i) => i !== index);
+                        setFinancialInfo({...financialInfo, additionalItems: updated});
+                      }}
+                    >
+                      Remove
+                    </s-button>
+                  </s-stack>
+                </s-box>
+              ))}
+              <s-button
+                variant="secondary"
+                onClick={() => {
+                  setFinancialInfo({
+                    ...financialInfo,
+                    additionalItems: [...financialInfo.additionalItems, { description: '', amount: '' }]
+                  });
+                }}
+              >
+                Add Line Item
+              </s-button>
+            </s-stack>
+
+            {/* Auto-calculated Summary */}
+            {(() => {
+              const diagnostic = parseFloat(financialInfo.diagnostic || 0);
+              const parts = parseFloat(financialInfo.parts || 0);
+              const labor = parseFloat(financialInfo.labor || 0);
+              const additionalTotal = financialInfo.additionalItems.reduce((sum, item) => sum + parseFloat(item.amount || 0), 0);
+              const estimatedTotal = diagnostic + parts + labor + additionalTotal;
+              const depositPercentage = 0.20; // 20% for now
+              const requiredDeposit = estimatedTotal * depositPercentage;
+              const remainingBalance = estimatedTotal - requiredDeposit;
+
+              if (estimatedTotal > 0) {
+                return (
+                  <s-box background="highlight" padding="base" border="subdued" cornerRadius="medium">
+                    <s-stack direction="block" gap="none">
+                      <s-text tone="subdued" type="small">
+                        Summary
+                      </s-text>
+                    </s-stack>
+                    <s-stack direction="block" gap="none">
+                      <s-text type="small">Estimated Total: ${estimatedTotal.toFixed(2)}</s-text>
+                      <s-text type="small">Required Deposit (20%): ${requiredDeposit.toFixed(2)}</s-text>
+                      <s-text type="strong" tone="critical">
+                        Remaining Balance: ${remainingBalance.toFixed(2)}
+                      </s-text>
+                    </s-stack>
+                  </s-box>
+                );
+              }
+              return null;
+            })()}
+            
+            {errors.financial && (
+              <s-text tone="critical" type="small">{errors.financial}</s-text>
             )}
 
             <s-stack direction="block" gap="tight">
