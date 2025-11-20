@@ -998,85 +998,30 @@ export default function TicketDetail() {
             
             {/* Itemized Quote Breakdown */}
             {currentTicket.quoteItems && currentTicket.quoteItems.length > 0 && (
-              <div style={{ marginBottom: "1.5rem", padding: "1.25rem", background: "#ffffff", borderRadius: "12px", border: "1px solid #e5e7eb", boxShadow: "0 1px 3px rgba(0, 0, 0, 0.1)" }}>
-                <h4 style={{ fontSize: "15px", fontWeight: "600", marginBottom: "1rem", color: "#111827", display: "flex", alignItems: "center", gap: "0.5rem" }}>
-                  <span style={{ fontSize: "18px" }}>📋</span>
-                  Itemized Pre-Quote
-                </h4>
+              <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "#f9fafb", borderRadius: "8px", border: "1px solid #e5e7eb" }}>
+                <h4 style={{ fontSize: "14px", fontWeight: "600", marginBottom: "1rem", color: "#374151" }}>Itemized Pre-Quote</h4>
                 <div style={{ display: "flex", flexDirection: "column", gap: "0.75rem" }}>
-                  {currentTicket.quoteItems.map((item, index) => {
-                    const getTypeIcon = (type: string) => {
-                      switch(type) {
-                        case 'diagnostic': return '🔍';
-                        case 'parts': return '🔧';
-                        case 'labor': return '⏱️';
-                        default: return '➕';
-                      }
-                    };
-                    
-                    const getTypeLabel = (type: string) => {
-                      switch(type) {
-                        case 'diagnostic': return 'Diagnostic/Bench Fee';
-                        case 'parts': return 'Estimated Parts';
-                        case 'labor': return 'Estimated Labor';
-                        default: return item.description || 'Additional Item';
-                      }
-                    };
-                    
-                    return (
-                      <div 
-                        key={item.id} 
-                        style={{ 
-                          display: "flex", 
-                          justifyContent: "space-between", 
-                          alignItems: "flex-start", 
-                          padding: "0.75rem", 
-                          background: index % 2 === 0 ? "#f9fafb" : "#ffffff",
-                          borderRadius: "8px",
-                          border: "1px solid #f3f4f6",
-                          transition: "all 0.2s"
-                        }}
-                        onMouseEnter={(e) => {
-                          e.currentTarget.style.background = "#f3f4f6";
-                          e.currentTarget.style.borderColor = "#e5e7eb";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.currentTarget.style.background = index % 2 === 0 ? "#f9fafb" : "#ffffff";
-                          e.currentTarget.style.borderColor = "#f3f4f6";
-                        }}
-                      >
-                        <div style={{ flex: 1 }}>
-                          <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: item.type === 'additional' && item.description ? "0.25rem" : "0" }}>
-                            <span style={{ fontSize: "16px" }}>{getTypeIcon(item.type)}</span>
-                            <div style={{ fontSize: "14px", fontWeight: "500", color: "#111827" }}>
-                              {getTypeLabel(item.type)}
-                            </div>
-                          </div>
-                          {item.type === 'additional' && item.description && (
-                            <div style={{ fontSize: "12px", color: "#6b7280", marginLeft: "1.75rem", marginTop: "0.25rem", fontStyle: "italic" }}>
-                              {item.description}
-                            </div>
-                          )}
+                  {currentTicket.quoteItems.map((item) => (
+                    <div key={item.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.75rem 0", borderBottom: "1px solid #e5e7eb" }}>
+                      <div>
+                        <div style={{ fontSize: "13px", fontWeight: "500", color: "#111827" }}>
+                          {item.type === 'diagnostic' ? 'Diagnostic/Bench Fee' :
+                           item.type === 'parts' ? 'Estimated Parts' :
+                           item.type === 'labor' ? 'Estimated Labor' :
+                           item.description || 'Additional Item'}
                         </div>
-                        <div style={{ fontSize: "15px", fontWeight: "600", color: "#059669", minWidth: "80px", textAlign: "right" }}>
-                          {formatCurrency(item.amount)}
-                        </div>
+                        {item.type === 'additional' && item.description && (
+                          <div style={{ fontSize: "12px", color: "#6b7280", marginTop: "0.25rem" }}>{item.description}</div>
+                        )}
                       </div>
-                    );
-                  })}
-                  <div style={{ 
-                    display: "flex", 
-                    justifyContent: "space-between", 
-                    alignItems: "center", 
-                    padding: "1rem 0.75rem", 
-                    marginTop: "0.5rem", 
-                    borderTop: "2px solid #d1d5db",
-                    background: "#f0fdf4",
-                    borderRadius: "8px",
-                    border: "1px solid #86efac"
-                  }}>
-                    <div style={{ fontSize: "15px", fontWeight: "700", color: "#111827" }}>Estimated Total</div>
-                    <div style={{ fontSize: "18px", fontWeight: "700", color: "#059669" }}>
+                      <div style={{ fontSize: "14px", fontWeight: "600", color: "#059669" }}>
+                        {formatCurrency(item.amount)}
+                      </div>
+                    </div>
+                  ))}
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", paddingTop: "0.75rem", marginTop: "0.5rem", borderTop: "2px solid #d1d5db" }}>
+                    <div style={{ fontSize: "14px", fontWeight: "600", color: "#111827" }}>Estimated Total</div>
+                    <div style={{ fontSize: "16px", fontWeight: "700", color: "#059669" }}>
                       {formatCurrency(currentTicket.quotedAmount || 0)}
                     </div>
                   </div>

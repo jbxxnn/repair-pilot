@@ -1362,66 +1362,46 @@ function Modal() {
             </s-stack>
 
             {/* Additional Line Items */}
-            <s-stack direction="block" gap="base">
-              <s-stack direction="block" gap="tight">
-                <s-text type="strong">Additional Line Items</s-text>
-                <s-text type="small" tone="subdued">Add any additional charges</s-text>
-              </s-stack>
-              
-              {financialInfo.additionalItems.length > 0 && (
-                <s-stack direction="block" gap="tight">
-                  {financialInfo.additionalItems.map((item, index) => (
-                    <s-box 
-                      key={index} 
-                      padding="base" 
-                      border="base" 
-                      cornerRadius="base"
-                      background="subdued"
+            <s-stack direction="block" gap="tight">
+              <s-text type="strong">Additional Line Items</s-text>
+              <s-text type="small" tone="subdued">Add any additional charges</s-text>
+              {financialInfo.additionalItems.map((item, index) => (
+                <s-box key={index} padding="base" border="base" cornerRadius="base">
+                  <s-stack direction="block" gap="tight">
+                    <s-text-field
+                      label="Description"
+                      value={item.description}
+                      onInput={(e) => {
+                        const updated = [...financialInfo.additionalItems];
+                        updated[index].description = e.target.value;
+                        setFinancialInfo({...financialInfo, additionalItems: updated});
+                      }}
+                      placeholder="Item description"
+                    />
+                    <s-number-field
+                      label="Amount"
+                      value={item.amount}
+                      onInput={(e) => {
+                        const updated = [...financialInfo.additionalItems];
+                        updated[index].amount = e.target.value;
+                        setFinancialInfo({...financialInfo, additionalItems: updated});
+                      }}
+                      placeholder="0.00"
+                      inputMode="decimal"
+                      controls="stepper"
+                    />
+                    <s-button
+                      variant="secondary"
+                      onClick={() => {
+                        const updated = financialInfo.additionalItems.filter((_, i) => i !== index);
+                        setFinancialInfo({...financialInfo, additionalItems: updated});
+                      }}
                     >
-                      <s-stack direction="block" gap="base">
-                        <s-stack direction="inline" gap="base" alignment="spaceBetween">
-                          <s-text type="small" tone="subdued">Line Item {index + 1}</s-text>
-                          <s-button
-                            variant="plain"
-                            onClick={() => {
-                              const updated = financialInfo.additionalItems.filter((_, i) => i !== index);
-                              setFinancialInfo({...financialInfo, additionalItems: updated});
-                            }}
-                          >
-                            <s-text tone="critical" type="small">Remove</s-text>
-                          </s-button>
-                        </s-stack>
-                        
-                        <s-stack direction="block" gap="tight">
-                          <s-text-field
-                            label="Description"
-                            value={item.description}
-                            onInput={(e) => {
-                              const updated = [...financialInfo.additionalItems];
-                              updated[index].description = e.target.value;
-                              setFinancialInfo({...financialInfo, additionalItems: updated});
-                            }}
-                            placeholder="e.g., Screen protector, Case, etc."
-                          />
-                          <s-number-field
-                            label="Amount"
-                            value={item.amount}
-                            onInput={(e) => {
-                              const updated = [...financialInfo.additionalItems];
-                              updated[index].amount = e.target.value;
-                              setFinancialInfo({...financialInfo, additionalItems: updated});
-                            }}
-                            placeholder="0.00"
-                            inputMode="decimal"
-                            controls="stepper"
-                          />
-                        </s-stack>
-                      </s-stack>
-                    </s-box>
-                  ))}
-                </s-stack>
-              )}
-              
+                      Remove
+                    </s-button>
+                  </s-stack>
+                </s-box>
+              ))}
               <s-button
                 variant="secondary"
                 onClick={() => {
@@ -1431,10 +1411,7 @@ function Modal() {
                   });
                 }}
               >
-                <s-stack direction="inline" gap="tight" alignment="center">
-                  <s-text>+</s-text>
-                  <s-text>Add Line Item</s-text>
-                </s-stack>
+                Add Line Item
               </s-button>
             </s-stack>
 
