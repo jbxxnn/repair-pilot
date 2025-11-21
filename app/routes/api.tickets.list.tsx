@@ -2,7 +2,7 @@ import type { LoaderFunctionArgs } from "react-router";
 import { authenticate } from "../shopify.server";
 import prisma from "../db.server";
 import { TICKET_STATUSES } from "../utils/ticket-status";
-import { getStaffMember } from "../services/shopify.server";
+import { getStaffMember, getCustomer } from "../services/shopify.server";
 
 export interface Ticket {
   id: string;
@@ -32,6 +32,12 @@ export interface Ticket {
     name: string;
     email: string | null;
     phone: string | null;
+  } | null;
+  customer?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+    displayName: string;
   } | null;
   quoteItems?: Array<{
     id: string;
@@ -202,6 +208,7 @@ export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response>
     const transformedTickets: Ticket[] = await Promise.all(
       tickets.map(async (ticket, index) => {
         let technician = null;
+        let customer = null;
         
         // Fetch technician info from Shopify if technicianId exists
         if (ticket.technicianId) {
@@ -218,6 +225,24 @@ export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response>
           } catch (error) {
             console.error(`[TICKETS:${requestId}] Error fetching staff member ${ticket.technicianId} for ticket ${index}:`, error);
             // Continue without technician info if fetch fails
+          }
+        }
+
+        // Fetch customer info from Shopify if customerId exists
+        if (ticket.customerId) {
+          try {
+            const customerData = await getCustomer(request, ticket.customerId);
+            if (customerData) {
+              customer = {
+                id: customerData.id,
+                firstName: customerData.firstName || null,
+                lastName: customerData.lastName || null,
+                displayName: customerData.displayName,
+              };
+            }
+          } catch (error) {
+            console.error(`[TICKETS:${requestId}] Error fetching customer ${ticket.customerId} for ticket ${index}:`, error);
+            // Continue without customer info if fetch fails
           }
         }
 
@@ -245,6 +270,7 @@ export const loader = async ({ request }: LoaderFunctionArgs): Promise<Response>
           depositCollectedAmount: ticket.depositCollectedAmount ? ticket.depositCollectedAmount.toNumber() : null,
           technicianId: ticket.technicianId,
           technician,
+          customer,
           createdAt: ticket.createdAt,
           updatedAt: ticket.updatedAt,
         };

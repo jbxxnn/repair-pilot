@@ -314,6 +314,13 @@ function TicketCard({ ticket, onUpdate, onClick }: { ticket: any; onUpdate: () =
           <span style={{ background: "#f3f4f6", color: "#374151", padding: "0.125rem 0.5rem", borderRadius: "4px", fontSize: "11px", fontWeight: "500" }}>{ticket.deviceType || "Unknown"}</span>
         </div>
       </div>
+      {ticket.customer && (ticket.customer.firstName || ticket.customer.lastName) && (
+        <div style={{ marginBottom: "0.5rem" }}>
+          <div style={{ fontSize: "13px", fontWeight: "600", color: "#374151", lineHeight: "1.4" }}>
+            {[ticket.customer.firstName, ticket.customer.lastName].filter(Boolean).join(" ")}
+          </div>
+        </div>
+      )}
       <div style={{ marginBottom: "0.5rem" }}>
         <div style={{ fontSize: "13px", fontWeight: "500", color: "#111827", lineHeight: "1.4" }}>{ticket.deviceBrand} {ticket.deviceModel}</div>
       </div>
