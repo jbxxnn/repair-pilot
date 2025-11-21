@@ -967,7 +967,7 @@ function Modal() {
         <s-section heading="Customer Information">
           <s-stack direction="block" gap="base">
             {/* Mode Toggle */}
-            <s-stack direction="inline" gap="tight">
+            <s-stack direction="inline" gap="base">
               <s-button 
                 variant={customerMode === 'search' ? 'primary' : 'secondary'}
                 onClick={() => {
