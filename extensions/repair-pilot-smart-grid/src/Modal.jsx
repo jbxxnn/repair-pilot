@@ -1117,6 +1117,7 @@ function Modal() {
                 <Dropdown
                   label="Device Type"
                   value={selectedDeviceTypeId}
+                  variant="primary"
                   onChange={(value) => {
                     setSelectedDeviceTypeId(value);
                     const selectedType = deviceTypes.find(dt => dt.id === value);
