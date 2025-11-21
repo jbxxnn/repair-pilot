@@ -21,6 +21,8 @@ export default function TicketsBoard() {
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [technicianFilter, setTechnicianFilter] = useState<string>("all");
   const [technicians, setTechnicians] = useState<Array<{ id: string; name: string }>>([]);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [allTickets, setAllTickets] = useState<any[]>([]); // Store all tickets for filtering
 
   const loadTickets = useCallback(async () => {
     const requestId = Math.random().toString(36).substring(7);
@@ -65,7 +67,8 @@ export default function TicketsBoard() {
       
       if (data.success) {
         console.log(`[CLIENT:${requestId}] ✅ Setting ${data.tickets?.length || 0} tickets`);
-        setTickets(data.tickets || []);
+        const loadedTickets = data.tickets || [];
+        setAllTickets(loadedTickets); // Store all tickets - this will trigger the search filter effect
       } else {
         console.error(`[CLIENT:${requestId}] ❌ API returned error:`, data.error);
         throw new Error(data.error || "Failed to load tickets");
@@ -83,6 +86,55 @@ export default function TicketsBoard() {
       console.log(`[CLIENT:${requestId}] ===== loadTickets completed =====`);
     }
   }, [statusFilter, technicianFilter]);
+
+  // Universal search filter function
+  const filterTicketsBySearch = useCallback((ticketsToFilter: any[], query: string) => {
+    if (!query || query.trim().length === 0) {
+      return ticketsToFilter;
+    }
+
+    const searchTerm = query.toLowerCase().trim();
+    
+    return ticketsToFilter.filter(ticket => {
+      // Search customer first name
+      const firstName = ticket.customer?.firstName?.toLowerCase() || '';
+      if (firstName.includes(searchTerm)) return true;
+
+      // Search customer last name
+      const lastName = ticket.customer?.lastName?.toLowerCase() || '';
+      if (lastName.includes(searchTerm)) return true;
+
+      // Search ticket code (last 8 characters of ID)
+      const ticketCode = ticket.id.slice(-8).toLowerCase();
+      if (ticketCode.includes(searchTerm)) return true;
+
+      // Search device model
+      const deviceModel = ticket.deviceModel?.toLowerCase() || '';
+      if (deviceModel.includes(searchTerm)) return true;
+
+      // Search device brand
+      const deviceBrand = ticket.deviceBrand?.toLowerCase() || '';
+      if (deviceBrand.includes(searchTerm)) return true;
+
+      // Search full customer name (first + last)
+      const fullName = `${firstName} ${lastName}`.trim();
+      if (fullName.includes(searchTerm)) return true;
+
+      // Optional: Search phone number (if customer data includes it)
+      // Note: Phone search would require fetching phone from customer data
+      // For now, we'll skip this as it requires additional API calls
+
+      return false;
+    });
+  }, []);
+
+  // Apply search filter when search query or allTickets changes
+  useEffect(() => {
+    if (allTickets.length > 0) {
+      const filtered = filterTicketsBySearch(allTickets, searchQuery);
+      setTickets(filtered);
+    }
+  }, [searchQuery, allTickets, filterTicketsBySearch]);
 
   // Load technicians for filter
   useEffect(() => {
@@ -144,6 +196,57 @@ export default function TicketsBoard() {
   return (
     <s-page heading="Ticket Board">
       <div style={{ marginBottom: "1.5rem", padding: "1rem", background: "white", borderRadius: "8px", boxShadow: "0 1px 3px rgba(0,0,0,0.1)" }}>
+        {/* Universal Search Bar */}
+        <div style={{ marginBottom: "1rem" }}>
+          <input
+            type="text"
+            placeholder="Search by customer name, ticket code, or device model..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.75rem 1rem",
+              borderRadius: "8px",
+              border: "1px solid #d1d5db",
+              fontSize: "16px",
+              backgroundColor: "white",
+              boxShadow: searchQuery ? "0 0 0 3px rgba(59, 130, 246, 0.1)" : "none",
+              transition: "all 0.2s",
+            }}
+            onFocus={(e) => {
+              e.currentTarget.style.borderColor = "#3b82f6";
+              e.currentTarget.style.boxShadow = "0 0 0 3px rgba(59, 130, 246, 0.1)";
+            }}
+            onBlur={(e) => {
+              e.currentTarget.style.borderColor = "#d1d5db";
+              if (!searchQuery) {
+                e.currentTarget.style.boxShadow = "none";
+              }
+            }}
+          />
+          {searchQuery && (
+            <div style={{ marginTop: "0.5rem", fontSize: "12px", color: "#6b7280", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+              <span>🔍</span>
+              <span>Found {tickets.length} ticket{tickets.length !== 1 ? 's' : ''}</span>
+              <button
+                onClick={() => setSearchQuery("")}
+                style={{
+                  marginLeft: "auto",
+                  padding: "0.25rem 0.5rem",
+                  fontSize: "12px",
+                  color: "#6b7280",
+                  background: "transparent",
+                  border: "none",
+                  cursor: "pointer",
+                  textDecoration: "underline",
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          )}
+        </div>
+        
         <div style={{ display: "flex", alignItems: "center", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
           <label htmlFor="status-filter" style={{ display: "flex", alignItems: "center", gap: "0.5rem", fontSize: "14px", fontWeight: "500" }}>
             <span>Status:</span>
