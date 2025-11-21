@@ -1362,46 +1362,48 @@ function Modal() {
             </s-stack>
 
             {/* Additional Line Items */}
-            <s-stack direction="block" gap="tight">
+            <s-stack direction="block" gap="base">
               <s-text type="strong">Additional Line Items</s-text>
               <s-text type="small" tone="subdued">Add any additional charges</s-text>
-              {financialInfo.additionalItems.map((item, index) => (
-                <s-box key={index} padding="base" border="base" cornerRadius="base">
-                  <s-stack direction="block" gap="tight">
-                    <s-text-field
-                      label="Description"
-                      value={item.description}
-                      onInput={(e) => {
-                        const updated = [...financialInfo.additionalItems];
-                        updated[index].description = e.target.value;
-                        setFinancialInfo({...financialInfo, additionalItems: updated});
-                      }}
-                      placeholder="Item description"
-                    />
-                    <s-number-field
-                      label="Amount"
-                      value={item.amount}
-                      onInput={(e) => {
-                        const updated = [...financialInfo.additionalItems];
-                        updated[index].amount = e.target.value;
-                        setFinancialInfo({...financialInfo, additionalItems: updated});
-                      }}
-                      placeholder="0.00"
-                      inputMode="decimal"
-                      controls="stepper"
-                    />
-                    <s-button
-                      variant="secondary"
-                      onClick={() => {
-                        const updated = financialInfo.additionalItems.filter((_, i) => i !== index);
-                        setFinancialInfo({...financialInfo, additionalItems: updated});
-                      }}
-                    >
-                      Remove
-                    </s-button>
-                  </s-stack>
-                </s-box>
-              ))}
+              <s-stack direction="block" gap="base">
+                {financialInfo.additionalItems.map((item, index) => (
+                  <s-box key={index} padding="base" border="base" cornerRadius="base">
+                    <s-stack direction="block" gap="tight">
+                      <s-text-field
+                        label="Description"
+                        value={item.description}
+                        onInput={(e) => {
+                          const updated = [...financialInfo.additionalItems];
+                          updated[index].description = e.target.value;
+                          setFinancialInfo({...financialInfo, additionalItems: updated});
+                        }}
+                        placeholder="Item description"
+                      />
+                      <s-number-field
+                        label="Amount"
+                        value={item.amount}
+                        onInput={(e) => {
+                          const updated = [...financialInfo.additionalItems];
+                          updated[index].amount = e.target.value;
+                          setFinancialInfo({...financialInfo, additionalItems: updated});
+                        }}
+                        placeholder="0.00"
+                        inputMode="decimal"
+                        controls="stepper"
+                      />
+                      <s-button
+                        variant="secondary"
+                        onClick={() => {
+                          const updated = financialInfo.additionalItems.filter((_, i) => i !== index);
+                          setFinancialInfo({...financialInfo, additionalItems: updated});
+                        }}
+                      >
+                        Remove
+                      </s-button>
+                    </s-stack>
+                  </s-box>
+                ))}
+              </s-stack>
               <s-button
                 variant="secondary"
                 onClick={() => {
