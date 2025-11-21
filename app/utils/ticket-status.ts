@@ -9,6 +9,7 @@ export const TICKET_STATUSES = {
   IN_PROGRESS: "in_progress",
   QA: "qa",
   READY: "ready",
+  COMPLETED: "completed",
   CLOSED: "closed",
   ON_HOLD: "on_hold",
   REFUNDED: "refunded",
@@ -17,12 +18,13 @@ export const TICKET_STATUSES = {
 export type TicketStatus = (typeof TICKET_STATUSES)[keyof typeof TICKET_STATUSES];
 
 export const TICKET_STATUS_LABELS: Record<TicketStatus, string> = {
-  [TICKET_STATUSES.INTAKE]: "Intake",
+  [TICKET_STATUSES.INTAKE]: "Intake Complete",
   [TICKET_STATUSES.DIAGNOSING]: "Diagnosing",
-  [TICKET_STATUSES.AWAITING_PARTS]: "Awaiting Parts",
-  [TICKET_STATUSES.IN_PROGRESS]: "In Progress",
-  [TICKET_STATUSES.QA]: "QA",
-  [TICKET_STATUSES.READY]: "Ready",
+  [TICKET_STATUSES.AWAITING_PARTS]: "Waiting for Parts",
+  [TICKET_STATUSES.IN_PROGRESS]: "Repair in Progress",
+  [TICKET_STATUSES.QA]: "Quality Check",
+  [TICKET_STATUSES.READY]: "Ready for Pickup",
+  [TICKET_STATUSES.COMPLETED]: "Completed",
   [TICKET_STATUSES.CLOSED]: "Closed",
   [TICKET_STATUSES.ON_HOLD]: "On Hold",
   [TICKET_STATUSES.REFUNDED]: "Refunded",
@@ -39,6 +41,7 @@ export const ACTIVE_STATUSES: TicketStatus[] = [
 ];
 
 export const COMPLETED_STATUSES: TicketStatus[] = [
+  TICKET_STATUSES.COMPLETED,
   TICKET_STATUSES.CLOSED,
   TICKET_STATUSES.REFUNDED,
 ];

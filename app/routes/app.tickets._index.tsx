@@ -115,6 +115,7 @@ export default function TicketsBoard() {
     TICKET_STATUSES.IN_PROGRESS,
     TICKET_STATUSES.QA,
     TICKET_STATUSES.READY,
+    TICKET_STATUSES.COMPLETED,
     TICKET_STATUSES.CLOSED,
   ];
 
@@ -231,6 +232,7 @@ function TicketColumn({ status, tickets, onUpdate, onTicketClick }: { status: Ti
     [TICKET_STATUSES.IN_PROGRESS]: { bg: "#ddd6fe", text: "#5b21b6" },
     [TICKET_STATUSES.QA]: { bg: "#fce7f3", text: "#9f1239" },
     [TICKET_STATUSES.READY]: { bg: "#d1fae5", text: "#065f46" },
+    [TICKET_STATUSES.COMPLETED]: { bg: "#bbf7d0", text: "#166534" },
     [TICKET_STATUSES.CLOSED]: { bg: "#e5e7eb", text: "#374151" },
   };
   const color = statusColors[status] || { bg: "#f3f4f6", text: "#6b7280" };
