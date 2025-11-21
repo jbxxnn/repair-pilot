@@ -1454,9 +1454,9 @@ function Modal() {
               <s-text tone="critical" type="small">{errors.financial}</s-text>
             )}
 
-            <s-stack direction="block" gap="tight">
+            <s-stack direction="block" gap="base">
               <s-text type="strong">Payment Method</s-text>
-              <s-stack direction="inline" gap="tight">
+              <s-stack direction="inline" gap="base">
                 <s-button
                   variant={paymentMode === 'pos' ? 'primary' : 'secondary'}
                   onClick={() => setPaymentMode('pos')}
