@@ -1370,7 +1370,7 @@ function Modal() {
                 {financialInfo.additionalItems.map((item, index) => (
                   <s-box key={index} padding="base" border="base" cornerRadius="base">
                     <s-stack direction="block" gap="base">
-                      <s-text-field
+                      <s-text-area
                         label="Description"
                         value={item.description}
                         onInput={(e) => {
@@ -1379,7 +1379,7 @@ function Modal() {
                           setFinancialInfo({...financialInfo, additionalItems: updated});
                         }}
                         placeholder="Item description"
-                        rows={3}
+                        rows={4}
                       />
                       <s-number-field
                         label="Amount"
