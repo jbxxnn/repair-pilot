@@ -247,6 +247,14 @@ function Modal() {
   const [selectedTechnicianId, setSelectedTechnicianId] = useState('');
   const [loadingTechnicians, setLoadingTechnicians] = useState(true);
 
+  // Pricing history state
+  const [pricingHistory, setPricingHistory] = useState({
+    averagePrice: null,
+    mostRecentPrice: null,
+    matchCount: 0,
+    loading: false,
+  });
+
 
 
   // Form state
@@ -604,6 +612,88 @@ function Modal() {
 
     return () => clearTimeout(timeoutId);
   }, [customerSearch]);
+
+  // Fetch pricing history when device/repair type selections change
+  useEffect(() => {
+    const fetchPricingHistory = async () => {
+      // Only fetch if we have device type, brand, model, and repair type selected
+      const selectedDeviceType = deviceTypes.find(dt => dt.id === selectedDeviceTypeId);
+      const selectedBrand = brands.find(b => b.id === selectedBrandId);
+      const selectedModel = models.find(m => m.id === selectedModelId);
+      const selectedRepairType = repairTypes.find(rt => rt.id === selectedRepairTypeId);
+
+      if (!selectedDeviceType || !selectedBrand || !selectedModel || !selectedRepairType) {
+        setPricingHistory({
+          averagePrice: null,
+          mostRecentPrice: null,
+          matchCount: 0,
+          loading: false,
+        });
+        return;
+      }
+
+      // Skip if "Other" is selected (we don't have historical data for custom entries)
+      if (selectedDeviceType.name === 'Other' || 
+          selectedBrand.name === 'Other' || 
+          selectedModelId === 'other' || 
+          selectedRepairTypeId === 'other') {
+        setPricingHistory({
+          averagePrice: null,
+          mostRecentPrice: null,
+          matchCount: 0,
+          loading: false,
+        });
+        return;
+      }
+
+      setPricingHistory(prev => ({ ...prev, loading: true }));
+
+      try {
+        const params = new URLSearchParams({
+          deviceType: selectedDeviceType.name,
+          deviceBrand: selectedBrand.name,
+          deviceModel: selectedModel.name,
+          repairType: selectedRepairType.name,
+        });
+
+        const response = await fetch(`${APP_URL}/api/tickets/pricing-history?${params.toString()}`, {
+          credentials: 'include',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.success) {
+            setPricingHistory({
+              averagePrice: data.averagePrice,
+              mostRecentPrice: data.mostRecentPrice,
+              matchCount: data.matchCount || 0,
+              loading: false,
+            });
+          } else {
+            setPricingHistory({
+              averagePrice: null,
+              mostRecentPrice: null,
+              matchCount: 0,
+              loading: false,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Failed to load pricing history:', error);
+        setPricingHistory({
+          averagePrice: null,
+          mostRecentPrice: null,
+          matchCount: 0,
+          loading: false,
+        });
+      }
+    };
+
+    fetchPricingHistory();
+  }, [selectedDeviceTypeId, selectedBrandId, selectedModelId, selectedRepairTypeId, deviceTypes, brands, models, repairTypes]);
 
   const validateForm = () => {
     const newErrors = {};
@@ -1323,6 +1413,35 @@ function Modal() {
         {/* Financial Section - Itemized Pre-Quote */}
         <s-section heading="Payment Information">
           <s-stack direction="block" gap="base">
+            {/* Historical Pricing Assistant */}
+            {pricingHistory.matchCount > 0 && (
+              <s-box background="highlight" padding="base" border="subdued" cornerRadius="medium">
+                <s-stack direction="block" gap="tight">
+                  <s-text type="strong" tone="base">💰 Pricing Reference</s-text>
+                  <s-text type="small" tone="subdued">
+                    Based on {pricingHistory.matchCount} similar repair{pricingHistory.matchCount !== 1 ? 's' : ''}
+                  </s-text>
+                  <s-stack direction="block" gap="none">
+                    {pricingHistory.averagePrice !== null && (
+                      <s-text type="small">
+                        Average Price: <s-text type="strong">${pricingHistory.averagePrice.toFixed(2)}</s-text>
+                      </s-text>
+                    )}
+                    {pricingHistory.mostRecentPrice !== null && (
+                      <s-text type="small">
+                        Most Recent: <s-text type="strong">${pricingHistory.mostRecentPrice.toFixed(2)}</s-text>
+                      </s-text>
+                    )}
+                  </s-stack>
+                </s-stack>
+              </s-box>
+            )}
+            {pricingHistory.loading && (
+              <s-box padding="base" background="subdued" cornerRadius="medium">
+                <s-text type="small" tone="subdued">Loading pricing history...</s-text>
+              </s-box>
+            )}
+
             {/* Diagnostic/Bench Fee */}
             <s-stack direction="block" gap="tight">
               <s-text type="strong">Diagnostic/Bench Fee</s-text>
